@@ -4,11 +4,21 @@ library(tidyverse)
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
-## IUCN taxonomy Jun 2025
+## IUCN taxonomy Jun 2025, 11031 sp
 iucn.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv"))
+iucn.taxo.short <- iucn.taxo %>% filter(status != "EX") %>% 
+  select(IUCN.name, common.name, status)
 
 ## Wikipedia species binomials
+## Collated using the wikidata query service (SPARQL)
 wiki.species <- read.csv(paste0(data.path, "Data/Wikipedia/all.birds.wiki.csv"))
+wiki.species <- wiki.species%>% 
+  mutate(common.name = gsub("https://en.wikipedia.org/wiki/", "", wikipediaURL),
+         common.name = gsub("_", " ", common.name),
+         common.name = gsub("%27", "'", common.name),
+         common.name = str_replace_all(common.name, 
+                                       "(?<=\\s)([a-z])", 
+                                       ~ toupper(.x)))
 
 donald.trade <- read.csv(paste0(data.path, "Data/Donald.et.al.2024/Donald.TableS5.csv"))
 # remove entries for three speciens (binomial names) where geographic ssp are included with
@@ -20,9 +30,7 @@ donald.trade <- donald.trade %>%
 
 ## Resolve taxonomy - Donald et al. 2024 ---------------------------------------
 
-## 11031
-iucn.taxo.short <- iucn.taxo %>% filter(status != "EX") %>% 
-  select(IUCN.name, status)
+
 ## 10999
 donald.trade.short <- donald.trade %>% rename("trade.name" = "Scientific.name") %>%
   select(trade.name, Common.name, Trade.Prevalence.Score)
@@ -284,19 +292,40 @@ tax.match <- iucn.taxo.short.upd %>%
   group_by(donald.name.upd) %>%
   mutate(donald.name.upd.type = ifelse(is.na(donald.name.upd.type) & n()>1, "-NOMINATE sp SPLIT-", donald.name.upd.type))
 
-## 
+
 
 
 ## Resolve taxonomy - Wikipedia ------------------------------------------------
 
-wiki.match <- iucn.taxo.short %>%
-  left_join(wiki.species, by = c("IUCN.name" = "taxonName"))
+## Binom match
+wiki.binom <- iucn.taxo.short %>%
+  left_join(wiki.species, by = c("IUCN.name" = "taxonName")) %>%
+  rename("common.name" = "common.name.x")
+wiki.binom.match <- wiki.binom %>% filter(!is.na(wikipediaURL)) 
 
-wiki.match <-   wiki.species%>%
-  left_join(iucn.taxo.short, by = c( "taxonName"="IUCN.name"))
+## common name match
+wiki.common <- wiki.binom %>% filter(is.na(wikipediaURL)) %>% 
+  select(IUCN.name, common.name, status) %>%
+  left_join(wiki.species, by = c("common.name"))
+wiki.common.match <- wiki.common %>% filter(!is.na(wikipediaURL))
 
-wiki.match %>% filter(is.na(wikipediaURL))
-wiki.match %>% filter(is.na(status))
+## manual final step
+wiki.common %>% filter(is.na(wikipediaURL)) %>% 
+  select(IUCN.name, common.name, status) %>%
+  write.csv(paste0(data.path, "Data/Wikipedia/missing.links.csv"))
+## read in corrected links
+wiki.manual <- read.csv(paste0(data.path, "Data/Wikipedia/missing.links.corrected.csv")) %>%
+  mutate(wikipediaURL = ifelse(wikipediaURL == "", NA, wikipediaURL))
+wiki.manual %>% filter(is.na(wikipediaURL)) # 48 could not be clearly linked to pages
 
-iucn.taxo.short %>% group_by(IUCN.name) %>% filter(n()>1)
-f <- wiki.species %>% group_by(taxonName) %>% filter(n()>1)
+iucn.wiki.tax <- rbind(
+  select(wiki.binom.match, IUCN.name, common.name, status, wikipediaURL),
+  select(wiki.common.match, IUCN.name, common.name, status, wikipediaURL),
+  select(wiki.manual, IUCN.name, common.name, status, wikipediaURL))
+
+length(unique(iucn.wiki.tax$IUCN.name)) # 11031
+iucn.wiki.tax %>% filter(is.na(wikipediaURL)) # 48
+
+write.csv(iucn.wiki.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.match.csv"))
+
+       
