@@ -5,21 +5,17 @@ library(stringi)
 
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
-wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/all.birds.wiki.csv"))
+all.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/all.birds.wiki.csv"))
+matched.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.match.csv"))
 
 ## Scrape wikipedia -------------------------------------------------------------
 
-# tidy up species common name
-wiki.urls <- wiki.urls %>% 
-  mutate(common.name = gsub("https://en.wikipedia.org/wiki/", "", wikipediaURL),
-         common.name = gsub("_", " ", common.name),
-         common.name = gsub("%27", "'", common.name),)
 
 wiki.text.df <- data.frame()
 
-for (i in 1:nrow(wiki.urls)) {
-  cat(i, "out of 12053", "\n")
-  wiki.i <- wiki.urls[i,]
+for (i in 1:nrow(matched.wiki.urls)) {
+  cat(i, "out of ",nrow(matched.wiki.urls), "\n")
+  wiki.i <- matched.wiki.urls[i,]
   # Read the HTML content from the page
   page <- read_html(wiki.i$wikipediaURL)
   # Extract the main content area of the article
@@ -42,3 +38,19 @@ for (i in 1:nrow(wiki.urls)) {
 check <- wiki.text.df %>% filter(is.na(text))
 
 write.csv(wiki.text.df, paste0(data.path, "Data/Wikipedia/all.birds.wiki.text.csv"))
+
+## Text search -----------------------------------------------------------------
+
+order.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv"))
+used.sp <- order.use %>% filter(!is.na(code)) #6559 rows
+used.sp %>% group_by(description) %>% tally()
+
+# Dominant use categories are
+# - Food (consumption, eaten, eating, delicacy, consumed, cooking, meat)
+# - Pets (pet, cagebird, cage-bird, cage bird, collector)
+# - Sport hunting (game bird, gamebird, sport shoot, sports shoot, drive)
+# - jewelry, 
+# - medicine
+# - Wearing apparel, accessories
+
+# generic (trade, market, sold, hunt)
