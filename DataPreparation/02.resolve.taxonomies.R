@@ -28,6 +28,10 @@ donald.trade <- donald.trade %>%
   filter(!Common.name %in% c("Grey-rumped Myna", "Grey-backed Myna",
                              "Foxy Lark", "Ash's Lark"))
 
+## IUCN SpUD database
+spud.species <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.birds.jul25.csv"))
+
+
 ## Resolve taxonomy - Donald et al. 2024 ---------------------------------------
 
 
@@ -36,7 +40,7 @@ donald.trade.short <- donald.trade %>% rename("trade.name" = "Scientific.name") 
   select(trade.name, Common.name, Trade.Prevalence.Score)
 
 nrow(donald.trade.short) #10999
-nrow(filter(donald.trade.short, Trade.Prevalence.Score>0)) #4915
+nrow(filter(donald.trade.short, Trade.Prevalence.Score>0)) #4913
 
 # tr.sp <- donald.trade.short %>% filter(Trade.Prevalence.Score>0) # 4915
 # order.use <- read.csv( paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv"))
@@ -48,7 +52,7 @@ nrow(filter(donald.trade.short, Trade.Prevalence.Score>0)) #4915
 tax.match <- iucn.taxo.short %>%
   left_join(donald.trade.short, by = c("IUCN.name" = "trade.name"))
 
-donald.sp <- tax.match %>% filter(!is.na(Trade.Prevalence.Score)) #10,812
+donald.sp <- tax.match %>% filter(!is.na(Trade.Prevalence.Score)) #10,808
 
 
 
@@ -290,10 +294,12 @@ iucn.taxo.short.upd <- iucn.taxo.short %>%
 tax.match <- iucn.taxo.short.upd %>%
   left_join(donald.trade.short, by = c("donald.name.upd" = "trade.name")) %>%
   group_by(donald.name.upd) %>%
-  mutate(donald.name.upd.type = ifelse(is.na(donald.name.upd.type) & n()>1, "-NOMINATE sp SPLIT-", donald.name.upd.type))
+  mutate(donald.name.upd.type = ifelse(is.na(donald.name.upd.type) & n()>1,
+                                       "-NOMINATE sp SPLIT-", donald.name.upd.type)) %>%
+  select(-Common.name)
 
 
-
+write.csv(tax.match, paste0(data.path, "Data/Donald.et.al.2024/IUCN.Donald.taxo.match.csv"))
 
 ## Resolve taxonomy - Wikipedia ------------------------------------------------
 
@@ -329,3 +335,34 @@ iucn.wiki.tax %>% filter(is.na(wikipediaURL)) # 48
 write.csv(iucn.wiki.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.match.csv"))
 
        
+## Resolve taxonomy - SpUD -----------------------------------------------------
+
+spud.short <- spud.species %>% 
+  select(Scientific.name, Purpose.s..of.end.use) %>% 
+  rename("Purpose" = "Purpose.s..of.end.use")
+
+check <- spud.short %>% left_join(iucn.taxo.short, by = c("Scientific.name" = "IUCN.name"))
+unique((check %>% filter(is.na(status)))$Scientific.name)
+
+spud.match <- spud.short %>% 
+  mutate(IUCN.name = case_when(Scientific.name == "Butastur Rufipennis" ~ "Butastur rufipennis",
+                               Scientific.name == "Ciconia Nigra" ~ "Ciconia nigra",
+                               Scientific.name == "Accipiter Ovampensis" ~ "Accipiter ovampensis",
+                               Scientific.name == "Acrocephalus Paludicola" ~ "Acrocephalus paludicola",
+                               Scientific.name == "Anas Platyrhynchos" ~ "Anas platyrhynchos",
+                               Scientific.name == "Gyps rueppellii" ~ "Gyps rueppelli",
+                               Scientific.name == "Coracias garrulus " ~ "Coracias garrulus",
+                               Scientific.name == "Eulemur rufrifrons" ~ NA,
+                               Scientific.name == "Rallidae\xa0spp. " ~ NA,
+                               Scientific.name == "Timaliidae" ~ NA,
+                               Scientific.name == "White-headed Vulture" ~ "Trigonoceps occipitalis",
+                               Scientific.name == "Haliaeetus leucoryphus " ~ "Haliaeetus leucoryphus",
+                               .default = Scientific.name)) %>%
+  filter(!is.na(IUCN.name))
+
+test <- spud.match %>% 
+  left_join(iucn.taxo.short, by = "IUCN.name")
+
+# three rows that cannot match, 2 at non-species resolution and one is a mammal.
+
+write.csv(spud.match, paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.csv"))
