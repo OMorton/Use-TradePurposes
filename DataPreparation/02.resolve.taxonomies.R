@@ -31,6 +31,12 @@ donald.trade <- donald.trade %>%
 ## IUCN SpUD database
 spud.species <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.birds.jul25.csv"))
 
+## Benítez-López et al., 2017
+# minor pre-processing of the data adding genus names where letter(dot) format was
+# used and swapping and for ", ".
+BL.species <- read.csv(paste0(data.path,
+                              "Data/Benitez-Lopez_2017/Benitez-Lopez_etal_2017_Hunting_Science.csv"))
+
 
 ## Resolve taxonomy - Donald et al. 2024 ---------------------------------------
 
@@ -366,3 +372,33 @@ test <- spud.match %>%
 # three rows that cannot match, 2 at non-species resolution and one is a mammal.
 
 write.csv(spud.match, paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.csv"))
+
+## Resolve taxonomy - Benítez-López et al., 2017--------------------------------
+BL.short <- BL.species %>% 
+  filter(Group == "Birds") %>% select(Species, Study) %>%
+  separate_longer_delim(Species, ", ") %>%
+  filter(!grepl("spp", Species))
+  
+
+test <- BL.short %>% left_join(iucn.taxo.short, by = c("Species"= "IUCN.name"))
+unique(filter(test, is.na(status))$Species)
+
+BL.short.upd <- BL.short %>%
+  mutate(IUCN.name = case_when(Species == "Leptotila rufaxila" ~ "Leptotila rufaxilla",
+                               Species == "Odontophorus stellarus" ~ "Odontophorus stellatus",
+                               Species == "Phalacrocorax brasilianus" ~ "Nannopterum brasilianum",
+                               Species == "Aceros undulatus" ~ "Rhyticeros undulatus",
+                               Species == "Claravis mondetoura" ~ "Paraclaravis mondetoura",
+                               Species == "Penelope purpurascens aequatorialis" ~ "Penelope purpurascens",
+                               Species == "Ramphastos ambiguus swainsonii" ~ "Ramphastos ambiguus",
+                               Species == "Francolinus lathami" ~ "Peliperdix lathami",
+                               Species == "Tockus camurus" ~ "Lophoceros camurus",
+                               Species == "Tockus fasciatus" ~ "Lophoceros fasciatus",
+                               Species == "Tropicranus albocristatus" ~ "Horizocerus albocristatus",
+                               Species == "Crax rubra griscomi" ~ "Crax rubra",
+                               Species == "Ara chloroptera" ~ "Ara chloropterus",
+                               .default = Species))
+test <- BL.short.upd %>% left_join(iucn.taxo.short, by = c("IUCN.name"))
+
+write.csv(BL.short.upd, paste0(data.path,
+                              "Data/Benitez-Lopez_2017/IUCN.BL.taxo.match.csv"))
