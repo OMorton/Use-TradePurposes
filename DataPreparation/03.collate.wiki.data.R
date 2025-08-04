@@ -9,7 +9,7 @@ all.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/all.birds.wiki.csv")
 matched.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.match.csv")) %>%
   select(-X)
 
-## Scrape wikipedia -------------------------------------------------------------
+## Scrape wikipedia - BIRDS ----------------------------------------------------
 
 wiki.text.df <- data.frame()
 
@@ -111,11 +111,11 @@ generic.str <- str_c(generic.keywords, collapse = "|")
 
 # search
 wiki.key.search <- wiki.all.text %>%
-  mutate(food = str_detect(text, regex(food.str, ignore_case = TRUE)),
-         pet = str_detect(text, regex(pet.str, ignore_case = TRUE)),
-         sport = str_detect(text, regex(sport.str, ignore_case = TRUE)),
-         jewelry = str_detect(text, regex(jewelry.str, ignore_case = TRUE)),
-         medicine = str_detect(text, regex(medicine.str, ignore_case = TRUE)),
+  mutate(food.UT.1 = str_detect(text, regex(food.str, ignore_case = TRUE)),
+         pet.UT.13 = str_detect(text, regex(pet.str, ignore_case = TRUE)),
+         sport.UT.15 = str_detect(text, regex(sport.str, ignore_case = TRUE)),
+         jewelry.UT.12 = str_detect(text, regex(jewelry.str, ignore_case = TRUE)),
+         medicine.UT.3 = str_detect(text, regex(medicine.str, ignore_case = TRUE)),
          generic = str_detect(text, regex(generic.str, ignore_case = TRUE)),
          # which words are detected
          food.matches = str_extract_all(text, regex(food.str, ignore_case = TRUE)),
@@ -132,7 +132,7 @@ wiki.key.search <- wiki.all.text %>%
          generic.matches = sapply(generic.matches, function(x) paste(unique(x), collapse = ", ")))
 
 wiki.key.search<- wiki.key.search %>% 
-  mutate(det = food + pet + sport + jewelry + medicine + generic)
+  mutate(det = food.UT.1 + pet.UT.13 + sport.UT.15 + jewelry.UT.12 + medicine.UT.3 + generic)
 write.csv(wiki.key.search, 
           paste0(data.path, "Data/Wikipedia/wiki.use.match.raw.csv"))
 
