@@ -4,10 +4,19 @@ library(tidyverse)
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
-## IUCN taxonomy Jun 2025, 11031 sp
+## IUCN bird taxonomy Jun 2025, 11031 extant sp
 iucn.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv"))
 iucn.taxo.short <- iucn.taxo %>% filter(status != "EX") %>% 
   select(IUCN.name, common.name, status)
+
+## IUCN mammal taxonomy Jun 2025, 5813 extant sp
+iucn.mam.taxo <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.csv"))
+iucn.mam.taxo.short <- iucn.mam.taxo %>% filter(red_list_category_code != "EX") %>% 
+  select(taxon_scientific_name, red_list_category_code) %>%
+  rename("IUCN.name" =1, "status" =2)
+
+aves.mam.iucn <- rbind(select(iucn.taxo.short, -common.name), iucn.mam.taxo.short)
+
 
 ## Wikipedia species binomials
 ## Collated using the wikidata query service (SPARQL)
@@ -37,6 +46,17 @@ spud.species <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.birds.jul25.csv"
 BL.species <- read.csv(paste0(data.path,
                               "Data/Benitez-Lopez_2017/Benitez-Lopez_etal_2017_Hunting_Science.csv"))
 
+## WILDMEAT database
+WM.species <- read.csv(paste0(data.path,
+                              "Data/WILDMEAT/WILDMEAT.species.list.Jul25.csv"))
+
+## Morton et al., 2021
+Morton.species <- read.csv(paste0(data.path,
+                              "Data/Morton_et_al_2021/Morton2021.csv"))
+
+## AVONET trait data
+avonet.df <- read.csv(paste0(data.path,
+                                  "Data/Tobias.et.al.AVONET/AVONET.data.csv"))
 
 ## Resolve taxonomy - Donald et al. 2024 ---------------------------------------
 
@@ -344,6 +364,7 @@ write.csv(iucn.wiki.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.m
 ## Resolve taxonomy - SpUD -----------------------------------------------------
 
 spud.short <- spud.species %>% 
+  filter(Type.of.use == "Extractive") %>%
   select(Scientific.name, Purpose.s..of.end.use) %>% 
   rename("Purpose" = "Purpose.s..of.end.use")
 
@@ -402,3 +423,84 @@ test <- BL.short.upd %>% left_join(iucn.taxo.short, by = c("IUCN.name"))
 
 write.csv(BL.short.upd, paste0(data.path,
                               "Data/Benitez-Lopez_2017/IUCN.BL.taxo.match.csv"))
+
+## Resolve taxonomy - Morton et al., 2021 --------------------------------------
+
+Morton.filt <- Morton.species %>% filter(Class %in% c("Aves", "Mammalia"), Specieslevel == 1) %>%
+  select(Class, SpeciesL, TP) %>%
+  distinct()
+
+Morton.corr <- Morton.filt %>% 
+  mutate(IUCN.name = case_when(SpeciesL == "Cebus apella" ~ "Sapajus apella",
+                               SpeciesL == "Cercopithecus mitis ssp.monoides" ~ "Cercopithecus mitis",
+                               SpeciesL == "Tropicranus albocristatus" ~ "Horizocerus albocristatus",
+                               SpeciesL == "Saguinus imperator" ~ "Tamarinus imperator",
+                               SpeciesL == "Saguinus fuscicollis" ~ "Leontocebus fuscicollis",
+                               SpeciesL == "Dasyprocta punctata ssp variegata" ~ "Dasyprocta punctata",
+                               SpeciesL == "Lagothrix poeppigii" ~ "Lagothrix lagothricha",
+                               .default = SpeciesL)) %>%
+  left_join(aves.mam.iucn, by = c("IUCN.name"))
+
+Morton.corr %>% filter(is.na(status))
+
+write.csv(Morton.corr, paste0(data.path,
+                          "Data/Morton_et_al_2021/IUCN.Morton.taxo.match.csv"))
+
+## Resolve taxonomy - WILDMEAT -------------------------------------------------
+
+## bird and mammal
+WM.filt <- WM.species %>% filter(Specieslevel == 1, Class %in% c("Aves", "Mammalia"))
+
+WM.corr <- WM.filt %>%
+  mutate(IUCN.name = case_when(Taxon == "Allochrocebus preussi ssp. insularis" ~ "Allochrocebus preussi",
+                               Taxon == "Anas platyrhynchos ssp. domesticus" ~ "REMOVE",
+                               Taxon == "Bos taurus ssp. domesticus" ~ "REMOVE",
+                               Taxon == "Bos taurus ssp. indicus" ~ "REMOVE",
+                               Taxon == "Bos taurus ssp. taurus" ~ "REMOVE",
+                               Taxon == "Canis lupus ssp. familiaris" ~ "Canis lupus",
+                               Taxon == "Cephalophus ogilbyi ssp. ogilbyi" ~ "Cephalophus ogilbyi",
+                               Taxon == "Cercopithecus ascanius ssp. whitesidei" ~ "Cercopithecus ascanius",
+                               Taxon == "Cercopithecus dryas" ~ "Chlorocebus dryas",
+                               Taxon == "Cercopithecus erythrotis ssp. camerunensis" ~ "Cercopithecus erythrotis",
+                               Taxon == "Cercopithecus erythrotis ssp. erythrotis" ~ "Cercopithecus erythrotis",
+                               Taxon == "Cercopithecus nictitans ssp. martini" ~ "Cercopithecus nictitans",
+                               Taxon == "Cercopithecus pogonias ssp. nigripes" ~ "Cercopithecus pogonias",
+                               Taxon == "Cercopithecus pogonias ssp. pogonias" ~ "Cercopithecus pogonias",
+                               Taxon == "Cercopithecus solatus" ~ "Allochrocebus solatus",
+                               Taxon == "Cercopithecus wolfi ssp. wolfi" ~ "Cercopithecus wolfi",
+                               Taxon == "Colobus satanas ssp. anthracinus" ~ "Colobus satanas",
+                               Taxon == "Colobus satanas ssp. satanas" ~ "Colobus satanas",
+                               Taxon == "Francolinus squamatus" ~ "Pternistis squamatus",
+                               Taxon == "Gorilla gorilla ssp. gorilla" ~ "Gorilla gorilla",
+                               Taxon == "Gallus gallus ssp. domesticus" ~ "REMOVE",
+                               Taxon == "Herpestes naso" ~ "Xenogale naso",
+                               Taxon == "Kobus ellipsiprymnus ssp. defassa" ~ "Kobus ellipsiprymnus",
+                               Taxon == "Mandrillus leucophaeus ssp. poensis" ~ "Mandrillus leucophaeus",
+                               Taxon == "Ovis aries ssp. domesticus" ~ "REMOVE",
+                               Taxon == "Pan troglodytes ssp. troglodytes" ~ "Pan troglodytes",
+                               Taxon == "Peliperdix coqui" ~ "Campocolinus coqui",
+                               Taxon == "Sciurocheirus alleni ssp. alleni" ~ "Sciurocheirus alleni",
+                               Taxon == "Sus scrofa ssp. domesticus" ~ "REMOVE",
+                               Taxon == "Syncerus caffer ssp. nanus" ~ "Syncerus caffer",
+                               Taxon == "Tauraco persa ssp. persa" ~ "Tauraco persa",
+                               .default = Taxon)) %>% 
+  left_join(aves.mam.iucn, by = c("IUCN.name")) %>%
+  filter(IUCN.name != "REMOVE")
+
+write.csv(WM.corr, paste0(data.path,
+                               "Data/WILDMEAT/IUCN.WM.taxo.match.csv"))
+
+## Resovle taxonomy - Marshall/New LEMIS ---------------------------------------
+## Resolve taxonomy - Tobias/AVONET data ---------------------------------------
+avonet.short <- avonet.df %>% select(Species1, Mass)
+
+## Used expanded version of prev key
+avonet.key.df <- read.csv(paste0(data.path,
+                             "Data/Tobias.et.al.AVONET/MSc.key.csv")) %>% distinct()
+
+# 5 species no traits - poorly known sp.
+iucn.taxo.short %>% left_join(avonet.key.df, by = c("IUCN.name"))%>%
+  filter(is.na(AVONET.sp))
+
+write.csv(avonet.key.df, paste0(data.path,
+                          "Data/Tobias.et.al.AVONET/IUCN.AVONET.taxo.match.csv"))
