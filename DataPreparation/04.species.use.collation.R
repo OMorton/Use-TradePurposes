@@ -1,0 +1,266 @@
+
+library(tidyverse)
+
+## Explanation -----------------------------------------------------------------
+
+## Data sources
+# 1. IUCN Use and Trade taxonomy
+# Justification - clearly states what use is assigned to each species through the
+# July_2020_Guidance_General_Use_and_Trade_Classification_Scheme.
+
+# 2. IUCN Threat Classification table
+# Justification - any species with BRU 5.1.1 (direct use) as a threat must 
+# be used in some form. Use not explicitly linked to any particular purpose.
+
+# 3. IUCN SpUD database
+# Justification - collates a range of examples of species use from published sources,
+# reports, grey literature etc. Details the type of use but not in the same
+# format as the IUCN Use and Trade taxonomy. Range of purposes recorded.
+
+# 4. Benítez-López et al., 2017 Science
+# Justification - Comprehensive meta-analysis of studies assessing species hunted 
+# for consumption. Species included can all be deemed as used, and based on 
+# the search string and inclusion/exclusion criteria used for the analysis, can
+# be deemed as used for human consumption.
+
+# 5. Donald et al. 2024 Cons Bio
+# Justification - compiled CITES, LEMIS, TRAFFIC, Lit review & IUCN data (but 
+# not subsistence) to produce a list of "traded" species - specifically excluding
+# non commercial use. Does not provide purposes.
+
+# 6. WILDMEAT database
+# Justification - comprehenisve review methodology of papers reporting the hunting 
+# and consumption of african forest species. Limited to consumptive use only
+# (commerical and subsistence).
+
+# 7. Morton et al., 2021 Nat Eco Evo
+# Justification - global review of studies assessing the impacts of trade. Documents
+# species end use to the level of pet, consumption or assorted
+
+# 8. Wikipedia species accounts 
+# Justification - one of the few if not the only open access resource that collates
+# general data around species. Data has full class coverage all detail varies 
+# greatly between species. Can be used to assess if species are used and if given
+# what the end purpose is.
+
+## Processing - 1. IUCN Use and Trade data ----------------------------------------
+IUCN.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv"))
+
+IUCN.use.tidy <- IUCN.use %>% 
+  # keep only used sp
+  filter(!is.na(code)) %>%
+  mutate(international = ifelse(international == TRUE, "international", NA),
+         national = ifelse(national == TRUE, "national", NA),
+         subsistence = ifelse(subsistence == TRUE, "subsistence", NA),
+         other = ifelse(other == TRUE, "other", NA),
+         code = paste0("IUCN.UT.",code),
+         level = paste(international, national, subsistence, other, sep = ", "),
+         level = gsub("NA, ", "", level),
+         level = gsub(", NA", "", level), 
+         level = gsub("NA", "unknown", level))
+
+# 4839 species with a use per the IUCN U & T
+IUCN.use.sp <- IUCN.use.tidy %>%
+  pivot_wider(id_cols = "IUCN.name", names_from = "code",
+              values_from = "level") %>%
+  mutate(used.per.UT = 1)
+
+## Processing - 2. IUCN Threat Classification table ----------------------------
+
+IUCN.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.Jun25.csv"))
+
+#1256 sp
+IUCN.thr.sp <- IUCN.thr %>% filter(code == "5_1_1") %>% 
+  mutate(used.per.BRU = 1) %>%
+  select(IUCN.name, used.per.BRU)
+
+## Processing - 3. IUCN SpUD database ------------------------------------------
+# focusing only on those extractive uses - e.g. not non extractive tourism
+spud.df <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.csv"))
+
+## 98 species
+spud.sp <- spud.df %>% group_by(IUCN.name) %>%
+  summarise(Purpose = toString(Purpose)) %>%
+  mutate(SpUD.UT.1 = grepl("Food and feed", Purpose),
+         SpUD.UT.3 = grepl("Medicine and hygiene", Purpose),
+         SpUD.UT.12 = grepl("Decorative and aesthetic", Purpose),
+         SpUD.UT.13 = grepl("pet", Purpose),
+         SpUD.UT.13 = grepl("Keeping/companionship/display", Purpose),
+         SpUD.UT.15 = grepl("Recreation", Purpose)
+         # Collection/display unclear from examples if linked to UT13 or 15
+         # Ceremony, religious, and ritual expression cannot be clearly linked to an end use
+         # Poisining incidents likewise not linked to use - more persecution
+         # Offer for sale/Commercial trade likewise not linked to use
+         # Amusement likewise not linked to use
+         # Monetary likewise not linked to use
+  ) %>%
+  mutate(used.per.SpUD = 1) %>%
+  select(-Purpose)
+
+## Processing - 4. Benítez-López et al., 2017 Science --------------------------
+
+## 94 sp
+BenLop.df <- read.csv(paste0(data.path, "Data/Benitez-Lopez_2017/IUCN.BL.taxo.match.csv"))
+BenLop.sp <- BenLop.df %>% group_by(IUCN.name) %>%
+  summarise(used.per.BenLop = 1,
+         BenLop.UT.1 = 1)
+
+## Processing - 5. Donald et al. 2024 Cons Bio ---------------------------------
+Don.df <- read.csv(paste0(data.path, "Data/Donald.et.al.2024/IUCN.Donald.taxo.match.csv"))
+
+## 4932 sp
+Don.sp <- Don.df %>% filter(Trade.Prevalence.Score > 0) %>%
+  group_by(IUCN.name) %>%
+  summarise(used.per.Don = 1)
+
+## Processing - 6. WILDMEAT Database -------------------------------------------
+WM.df <- read.csv(paste0(data.path,"Data/WILDMEAT/IUCN.WM.taxo.match.csv"))
+
+WM.sp <- WM.df %>% filter(Class == "Aves") %>%
+  group_by(IUCN.name) %>%
+  summarise(WM.UT.1 = 1, used.per.WM = 1)
+
+## Processing - 7. Morton et al. 2021 ------------------------------------------
+Morton.df <- read.csv(paste0(data.path,"Data/Morton_et_al_2021/IUCN.Morton.taxo.match.csv"))
+
+Morton.sp <- Morton.df %>% filter(Class == "Aves") %>%
+  group_by(IUCN.name) %>% mutate(use = 1) %>%
+  pivot_wider(id_cols = IUCN.name, names_from = TP, values_from = use) %>%
+  rename("Mort.UT.1" = "Bushmeat", "used.per.Mort" = "Assorted", "Mort.UT.13" = "Pet") %>%
+  mutate(used.per.Mort = 1)
+
+## Collate full use database ---------------------------------------------------
+## taxo for 11,195 sp (11,031 extant)
+iucn.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv")) %>%
+  select(IUCN.name, common.name, familyName, orderName, status)
+
+use.raw <- iucn.taxo  %>% filter(status != "EX") %>%
+  left_join(IUCN.use.sp) %>%
+  left_join(IUCN.thr.sp) %>%
+  left_join(spud.sp) %>%
+  left_join(BenLop.sp) %>%
+  left_join(Don.sp)%>%
+  left_join(WM.sp)%>%
+  left_join(Morton.sp)
+
+use.raw <- use.raw %>% 
+  mutate(used.per.UT = replace_na(used.per.UT, 0),
+         used.per.BRU = replace_na(used.per.BRU, 0),
+         used.per.SpUD = replace_na(used.per.SpUD, 0),
+         used.per.BenLop = replace_na(used.per.BenLop, 0),
+         used.per.Don = replace_na(used.per.Don, 0),
+         used.per.Mort = replace_na(used.per.Mort, 0),
+         used.per.WM = replace_na(used.per.WM, 0),
+    use = used.per.UT + used.per.BRU + used.per.SpUD + used.per.BenLop + 
+      used.per.Don + used.per.WM + used.per.Mort,
+    use = ifelse(use > 0, 1, 0),
+    any.purpose = ifelse(!is.na(IUCN.UT.13)|!is.na(IUCN.UT.1)|!is.na(IUCN.UT.15)|
+                         !is.na(IUCN.UT.3)|!is.na(IUCN.UT.11)|!is.na(IUCN.UT.17)|
+                         !is.na(IUCN.UT.12)|!is.na(IUCN.UT.18)|!is.na(IUCN.UT.7)|
+                         !is.na(IUCN.UT.14)|!is.na(IUCN.UT.10)|!is.na(IUCN.UT.2)|
+                         !is.na(IUCN.UT.16)|!is.na(SpUD.UT.1)|!is.na(SpUD.UT.3)|
+                         !is.na(SpUD.UT.12)|!is.na(SpUD.UT.13)|!is.na(SpUD.UT.15)|
+                         !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
+                         !is.na(WM.UT.1), 1, 0))
+
+sum(use.raw$use) # 5736 (04/08/25)
+sum(use.raw$any.purpose) # 4809 (04/08/25)
+
+## Processing - additional Wikipedia filter ------------------------------------
+
+wiki.uses.df <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.use.match.raw.csv"))
+
+# extract the positive hits per UT class
+wiki.UT.1 <- wiki.uses.df %>% filter(food.UT.1 == TRUE) %>% select(IUCN.name)
+wiki.UT.13 <- wiki.uses.df %>% filter(pet.UT.13 == TRUE) %>% select(IUCN.name)
+wiki.UT.15 <- wiki.uses.df %>% filter(sport.UT.15 == TRUE) %>% select(IUCN.name)
+wiki.UT.12 <- wiki.uses.df %>% filter(jewelry.UT.12 == TRUE) %>% select(IUCN.name)
+wiki.UT.3 <- wiki.uses.df %>% filter(medicine.UT.3 == TRUE) %>% select(IUCN.name)
+wiki.USE <- wiki.uses.df %>% filter(generic == TRUE) %>% select(IUCN.name)
+
+# filter the species not currently flagged in that class that wikipedia suggests is
+UT.1.flag <- use.raw %>% filter(is.na(SpUD.UT.1) & is.na(BenLop.UT.1) & is.na(IUCN.UT.1)) %>%
+  filter(IUCN.name %in% wiki.UT.1$IUCN.name)
+UT.13.flag <- use.raw %>% filter(is.na(SpUD.UT.13) & is.na(IUCN.UT.13)) %>%
+  filter(IUCN.name %in% wiki.UT.13$IUCN.name)
+UT.15.flag <- use.raw %>% filter(is.na(SpUD.UT.15) & is.na(IUCN.UT.15)) %>%
+  filter(IUCN.name %in% wiki.UT.15$IUCN.name)
+UT.12.flag <- use.raw %>% filter(is.na(SpUD.UT.12) & is.na(IUCN.UT.12)) %>%
+  filter(IUCN.name %in% wiki.UT.12$IUCN.name)
+UT.3.flag <- use.raw %>% filter(is.na(SpUD.UT.3) & is.na(IUCN.UT.3)) %>%
+  filter(IUCN.name %in% wiki.UT.3$IUCN.name)
+USE.flag <- use.raw %>% filter(use==0) %>%
+  filter(IUCN.name %in% wiki.USE$IUCN.name)
+
+# manual review - 1174 species
+to.rev <- data.frame(IUCN.name = unique(c(UT.1.flag$IUCN.name, UT.13.flag$IUCN.name,
+                              UT.15.flag$IUCN.name, UT.12.flag$IUCN.name,
+                              UT.3.flag$IUCN.name, USE.flag$IUCN.name)))
+
+to.rev.out <- wiki.uses.df %>% select(-text) %>% 
+  filter(IUCN.name %in% to.rev$IUCN.name) %>% select(-X.1, -X)
+
+write.csv(to.rev.out, paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.out.csv"))
+
+## Adding the Wikipedia data ---------------------------------------------------
+
+wiki.uses <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.in.csv"))
+wiki.uses <- wiki.uses %>% 
+  select(IUCN.name, MAN.food.UT.1, MAN.pet.UT.13, MAN.sport.UT.15, 
+         MAN.jewelry.UT.12, MAN.medicine.UT.3, MAN.generic) %>% 
+  rename("MAN.Wiki.UT.1" = "MAN.food.UT.1", "MAN.Wiki.UT.13" = "MAN.pet.UT.13",
+         "MAN.Wiki.UT.15" = "MAN.sport.UT.15", "MAN.Wiki.UT.12" = "MAN.jewelry.UT.12",
+         "MAN.Wiki.UT.3" = "MAN.medicine.UT.3", "used.per.wiki" = "MAN.generic")
+
+use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
+  mutate(used.per.wiki = replace_na(used.per.wiki, 0),
+         use = used.per.UT + used.per.BRU + used.per.SpUD + used.per.BenLop + 
+           used.per.Don + used.per.WM + used.per.Mort + used.per.wiki,
+         use = ifelse(use > 0, 1, 0),
+         any.purpose = ifelse(!is.na(IUCN.UT.13)|!is.na(IUCN.UT.1)|!is.na(IUCN.UT.15)|
+                                !is.na(IUCN.UT.3)|!is.na(IUCN.UT.11)|!is.na(IUCN.UT.17)|
+                                !is.na(IUCN.UT.12)|!is.na(IUCN.UT.18)|!is.na(IUCN.UT.7)|
+                                !is.na(IUCN.UT.14)|!is.na(IUCN.UT.10)|!is.na(IUCN.UT.2)|
+                                !is.na(IUCN.UT.16)|!is.na(SpUD.UT.1)|!is.na(SpUD.UT.3)|
+                                !is.na(SpUD.UT.12)|!is.na(SpUD.UT.13)|!is.na(SpUD.UT.15)|
+                                !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
+                                !is.na(WM.UT.1)|!is.na(MAN.Wiki.UT.1)|!is.na(MAN.Wiki.UT.13)|
+                                !is.na(MAN.Wiki.UT.15)|!is.na(MAN.Wiki.UT.12)|!is.na(MAN.Wiki.UT.3), 1, 0))
+
+sum(use.raw.wiki$use) # 5742 (04/08/25)
+sum(use.raw.wiki$any.purpose) # 4840 (04/08/25)
+write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/Aves/aves.full.uses.raw.csv"))
+
+
+## Tidy up final dataset -------------------------------------------------------
+sort(colnames(use.raw.wiki))
+## unknown uses ignored here (but are part of the UT used sp total)
+use.df <- use.raw.wiki %>%
+  group_by(IUCN.name, common.name, familyName, orderName, status) %>%
+  summarise(food.hum.1 = ifelse(!is.na(IUCN.UT.1)|!is.na(SpUD.UT.1)|!is.na(BenLop.UT.1)|
+                                  !is.na(WM.UT.1)|!is.na(Mort.UT.1)|!is.na(MAN.Wiki.UT.1), 1, 0),
+            food.an.2 = ifelse(!is.na(IUCN.UT.2), 1, 0),
+            med.3 = ifelse(!is.na(IUCN.UT.3)|!is.na(SpUD.UT.3)|!is.na(MAN.Wiki.UT.3), 1, 0),
+            fuels.7 = ifelse(!is.na(IUCN.UT.7), 1, 0),
+            apparel.10 = ifelse(!is.na(IUCN.UT.10), 1, 0),
+            other.household.11 = ifelse(!is.na(IUCN.UT.11), 1, 0),
+            jewellery.12 = ifelse(!is.na(IUCN.UT.12)|!is.na(MAN.Wiki.UT.12)|!is.na(SpUD.UT.12), 1, 0),
+            pets.13 = ifelse(!is.na(IUCN.UT.13)|!is.na(MAN.Wiki.UT.13)|!is.na(SpUD.UT.13)|
+                               !is.na(Mort.UT.13), 1, 0),
+            research.14 = ifelse(!is.na(IUCN.UT.14), 1, 0),
+            sport.15 = ifelse(!is.na(IUCN.UT.15)|!is.na(MAN.Wiki.UT.15)|!is.na(SpUD.UT.15), 1, 0),
+            ex.situ.16 = ifelse(!is.na(IUCN.UT.16), 1, 0),
+            other.16 = ifelse(!is.na(IUCN.UT.17), 1, 0),
+            no.purpose = ifelse(!is.na(IUCN.UT.13)|!is.na(IUCN.UT.1)|!is.na(IUCN.UT.15)|
+                                   !is.na(IUCN.UT.3)|!is.na(IUCN.UT.11)|!is.na(IUCN.UT.17)|
+                                   !is.na(IUCN.UT.12)|!is.na(IUCN.UT.18)|!is.na(IUCN.UT.7)|
+                                   !is.na(IUCN.UT.14)|!is.na(IUCN.UT.10)|!is.na(IUCN.UT.2)|
+                                   !is.na(IUCN.UT.16)|!is.na(SpUD.UT.1)|!is.na(SpUD.UT.3)|
+                                   !is.na(SpUD.UT.12)|!is.na(SpUD.UT.13)|!is.na(SpUD.UT.15)|
+                                   !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
+                                   !is.na(WM.UT.1)|!is.na(MAN.Wiki.UT.1)|!is.na(MAN.Wiki.UT.13)|
+                                   !is.na(MAN.Wiki.UT.15)|!is.na(MAN.Wiki.UT.12)|!is.na(MAN.Wiki.UT.3), 0, 1),
+            use = use)
+
+colSums(use.df[,6:19])
+write.csv(use.df, paste0(data.path, "Outputs/use.dataset/Aves/aves.full.uses.tidy.csv"))
