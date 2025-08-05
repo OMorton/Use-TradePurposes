@@ -10,12 +10,11 @@ iucn.taxo.short <- iucn.taxo %>% filter(status != "EX") %>%
   select(IUCN.name, common.name, status)
 
 ## IUCN mammal taxonomy Jun 2025, 5813 extant sp
-iucn.mam.taxo <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.csv"))
-iucn.mam.taxo.short <- iucn.mam.taxo %>% filter(red_list_category_code != "EX") %>% 
-  select(taxon_scientific_name, red_list_category_code) %>%
-  rename("IUCN.name" =1, "status" =2)
+iucn.mam.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Jul25.csv"))
+iucn.mam.taxo.short <- iucn.mam.taxo %>% filter(status != "EX") %>% 
+  select(IUCN.name, common.name, status)
 
-aves.mam.iucn <- rbind(select(iucn.taxo.short, -common.name), iucn.mam.taxo.short)
+aves.mam.iucn <- rbind(iucn.taxo.short, iucn.mam.taxo.short)
 
 
 ## Wikipedia species binomials
@@ -29,6 +28,17 @@ wiki.species <- wiki.species%>%
                                        "(?<=\\s)([a-z])", 
                                        ~ toupper(.x)))
 
+wiki.mammals <- read.csv(paste0(data.path, "Data/Wikipedia/all.mammals.wiki.csv"))
+wiki.mammals <- wiki.mammals%>% 
+  rename("wikipediaURL" = "article", "taxonName" = "name") %>%
+  mutate(common.name = gsub("https://en.wikipedia.org/wiki/", "", wikipediaURL),
+         common.name = gsub("_", " ", common.name),
+         common.name = gsub("%27", "'", common.name),
+         common.name = str_replace_all(common.name, 
+                                       "(?<=\\s)([a-z])", 
+                                       ~ toupper(.x)))
+
+## Donald et al taxonomy
 donald.trade <- read.csv(paste0(data.path, "Data/Donald.et.al.2024/Donald.TableS5.csv"))
 # remove entries for three speciens (binomial names) where geographic ssp are included with
 # distinct common names (effects Acridotheres melanopterus, Calendulauda africanoides,
@@ -327,7 +337,7 @@ tax.match <- iucn.taxo.short.upd %>%
 
 write.csv(tax.match, paste0(data.path, "Data/Donald.et.al.2024/IUCN.Donald.taxo.match.csv"))
 
-## Resolve taxonomy - Wikipedia ------------------------------------------------
+## Resolve taxonomy - Wikipedia - AVES -----------------------------------------
 
 ## Binom match
 wiki.binom <- iucn.taxo.short %>%
@@ -359,6 +369,39 @@ length(unique(iucn.wiki.tax$IUCN.name)) # 11031
 iucn.wiki.tax %>% filter(is.na(wikipediaURL)) # 48
 
 write.csv(iucn.wiki.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.match.csv"))
+
+## Resolve taxonomy - Wikipedia - MAMMALS --------------------------------------
+
+## Binom match
+wiki.binom.mam <- iucn.mam.taxo.short %>%
+  left_join(wiki.mammals, by = c("IUCN.name" = "taxonName")) %>%
+  rename("common.name" = "common.name.x")
+wiki.binom.mam.match <- wiki.binom.mam %>% filter(!is.na(wikipediaURL)) 
+
+## common name match
+wiki.mam.common <- wiki.binom.mam %>% filter(is.na(wikipediaURL)) %>% 
+  select(IUCN.name, common.name, status) %>%
+  left_join(wiki.mammals, by = c("common.name"))
+wiki.mam.common.match <- wiki.mam.common %>% filter(!is.na(wikipediaURL))
+
+## manual final step
+wiki.mam.common %>% filter(is.na(wikipediaURL)) %>% 
+  select(IUCN.name, common.name, status) %>%
+  write.csv(paste0(data.path, "Data/Wikipedia/missing.mam.links.csv"))
+## read in corrected links
+wiki.mam.manual <- read.csv(paste0(data.path, "Data/Wikipedia/missing.mam.links.corrected.csv")) %>%
+  mutate(wikipediaURL = ifelse(wikipediaURL == "", NA, wikipediaURL))
+wiki.mam.manual %>% filter(is.na(wikipediaURL)) # 73 could not be clearly linked to pages
+
+iucn.wiki.mam.tax <- rbind(
+  select(wiki.binom.mam.match, IUCN.name, common.name, status, wikipediaURL),
+  select(wiki.mam.common.match, IUCN.name, common.name, status, wikipediaURL),
+  select(wiki.mam.manual, IUCN.name, common.name, status, wikipediaURL))
+
+length(unique(iucn.wiki.mam.tax$IUCN.name)) # 5813
+iucn.wiki.mam.tax %>% filter(is.na(wikipediaURL)) # 73
+
+write.csv(iucn.wiki.mam.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.Mammals.taxo.match.csv"))
 
        
 ## Resolve taxonomy - SpUD -----------------------------------------------------
