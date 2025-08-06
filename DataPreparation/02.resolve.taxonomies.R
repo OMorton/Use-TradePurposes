@@ -48,7 +48,8 @@ donald.trade <- donald.trade %>%
                              "Foxy Lark", "Ash's Lark"))
 
 ## IUCN SpUD database
-spud.species <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.birds.jul25.csv"))
+spud.birds <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.birds.jul25.csv"))
+spud.mam <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.mam.jul25.csv"))
 
 ## Benítez-López et al., 2017
 # minor pre-processing of the data adding genus names where letter(dot) format was
@@ -63,6 +64,10 @@ WM.species <- read.csv(paste0(data.path,
 ## Morton et al., 2021
 Morton.species <- read.csv(paste0(data.path,
                               "Data/Morton_et_al_2021/Morton2021.csv"))
+
+## New LEMIS (Marshall 2025)
+LEMIS.species <- read.csv(paste0(data.path,
+                                  "Data/LEMIS/aves.mam.raw.sp.list.csv"))
 
 ## AVONET trait data
 avonet.df <- read.csv(paste0(data.path,
@@ -404,17 +409,17 @@ iucn.wiki.mam.tax %>% filter(is.na(wikipediaURL)) # 73
 write.csv(iucn.wiki.mam.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.Mammals.taxo.match.csv"))
 
        
-## Resolve taxonomy - SpUD -----------------------------------------------------
+## Resolve taxonomy - SpUD - AVES ----------------------------------------------
 
-spud.short <- spud.species %>% 
+spud.birds.short <- spud.birds %>% 
   filter(Type.of.use == "Extractive") %>%
   select(Scientific.name, Purpose.s..of.end.use) %>% 
   rename("Purpose" = "Purpose.s..of.end.use")
 
-check <- spud.short %>% left_join(iucn.taxo.short, by = c("Scientific.name" = "IUCN.name"))
+check <- spud.birds.short %>% left_join(iucn.taxo.short, by = c("Scientific.name" = "IUCN.name"))
 unique((check %>% filter(is.na(status)))$Scientific.name)
 
-spud.match <- spud.short %>% 
+spud.birds.match <- spud.birds.short %>% 
   mutate(IUCN.name = case_when(Scientific.name == "Butastur Rufipennis" ~ "Butastur rufipennis",
                                Scientific.name == "Ciconia Nigra" ~ "Ciconia nigra",
                                Scientific.name == "Accipiter Ovampensis" ~ "Accipiter ovampensis",
@@ -430,21 +435,57 @@ spud.match <- spud.short %>%
                                .default = Scientific.name)) %>%
   filter(!is.na(IUCN.name))
 
-test <- spud.match %>% 
+test <- spud.birds.match %>% 
   left_join(iucn.taxo.short, by = "IUCN.name")
 
 # three rows that cannot match, 2 at non-species resolution and one is a mammal.
 
-write.csv(spud.match, paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.csv"))
+write.csv(spud.birds.match, paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.csv"))
+
+## Resolve taxonomy - SpUD - MAMMALS -------------------------------------------
+
+spud.mam.short <- spud.mam %>% 
+  filter(Type.of.use == "Extractive") %>%
+  select(Scientific.name, Purpose.s..of.end.use) %>% 
+  rename("Purpose" = "Purpose.s..of.end.use")
+
+check <- spud.mam.short %>% left_join(iucn.mam.taxo.short, by = c("Scientific.name" = "IUCN.name"))
+unique((check %>% filter(is.na(status)))$Scientific.name)
+
+spud.mam.match <- spud.mam.short %>% 
+  mutate(IUCN.name = case_when(Scientific.name == "Monodon monoceros " ~ "Monodon monoceros",
+                               Scientific.name == "Macropus robustus" ~ "Osphranter robustus",
+                               Scientific.name == "Puma concolor " ~ "Puma concolor",
+                               Scientific.name == "Ursus maritimus " ~ "Ursus maritimus",
+                               Scientific.name == " Capra falconeri " ~ "Capra falconeri",
+                               Scientific.name == "Lepus spp." ~ NA,
+                               Scientific.name == "Petaurista ssp." ~ NA,
+                               Scientific.name == "Sciuridae spp." ~ NA,
+                               Scientific.name == "Rhizomys spp." ~ NA,
+                               Scientific.name == "Prinodon pardicolor" ~ "Prionodon pardicolor",
+                               Scientific.name == "Felis bengalensis" ~ "Prionailurus bengalensis",
+                               Scientific.name == "Sus scrofa " ~ "Sus scrofa",
+                               Scientific.name == "Muntiacus spp." ~ NA,
+                               Scientific.name == "Capricornis sumatrensis" ~ "Capricornis sumatraensis",
+                               .default = Scientific.name)) %>%
+  filter(!is.na(IUCN.name))
+
+test <- spud.mam.match %>% 
+  left_join(iucn.taxo.short, by = "IUCN.name")
+
+# five rows that cannot match, all at non-species resolution.
+
+write.csv(spud.mam.match, paste0(data.path, "Data/SpUD/iucn.spud.mam.taxo.match.csv"))
 
 ## Resolve taxonomy - Benítez-López et al., 2017--------------------------------
 BL.short <- BL.species %>% 
-  filter(Group == "Birds") %>% select(Species, Study) %>%
+  select(Species, Study) %>%
   separate_longer_delim(Species, ", ") %>%
+  separate_longer_delim(Species, " and ") %>%
   filter(!grepl("spp", Species))
   
 
-test <- BL.short %>% left_join(iucn.taxo.short, by = c("Species"= "IUCN.name"))
+test <- BL.short %>% left_join(aves.mam.iucn, by = c("Species"= "IUCN.name"))
 unique(filter(test, is.na(status))$Species)
 
 BL.short.upd <- BL.short %>%
@@ -461,8 +502,60 @@ BL.short.upd <- BL.short %>%
                                Species == "Tropicranus albocristatus" ~ "Horizocerus albocristatus",
                                Species == "Crax rubra griscomi" ~ "Crax rubra",
                                Species == "Ara chloroptera" ~ "Ara chloropterus",
-                               .default = Species))
-test <- BL.short.upd %>% left_join(iucn.taxo.short, by = c("IUCN.name"))
+                               # mammals
+                               Species == "Callicebus torquatus" ~ "Cheracebus torquatus",
+                               Species == "Lagothrix lagotricha" ~ "Lagothrix lagothricha",
+                               Species == "M. pandora" ~ "Mazama pandora",
+                               Species == "C. dorsalis" ~ "Cephalophus dorsalis",
+                               Species == "C. leucogaster" ~ "Cephalophus leucogaster",
+                               Species == "C. nigrifrons" ~ "Cephalophus nigrifrons",
+                               Species == "Neotragus moschatus" ~ "Nesotragus moschatus",
+                               Species == "Cebus capuchinus" ~ "Cebus capucinus",
+                               Species == "Herpailurus yaguarondi" ~ "Herpailurus yagouaroundi",
+                               Species == "Procyon cancrivorous" ~ "Procyon cancrivorus",
+                               Species == "P. lotor" ~ "Procyon lotor",
+                               Species == "M. gouazoubira" ~ "Mazama gouazoubira",
+                               Species == "Puma yagouaroundi" ~ "Herpailurus yagouaroundi",
+                               Species == "Procolobus pennantii" ~ "Piliocolobus pennantii",
+                               Species == "Pliocolobus badius" ~ "Piliocolobus badius",
+                               Species == "Callicebus discolor" ~ "Plecturocebus discolor",
+                               Species == "Lagothrix poeppigii" ~ "Lagothrix lagothricha",
+                               Species == "Saguinus tripartitus" ~ "Leontocebus tripartitus",
+                               Species == "Cephalophus nigrifons" ~ "Cephalophus nigrifrons",
+                               Species == "Anomalurus sp" ~ NA,
+                               Species == "L. wiedii" ~ "Leopardus wiedii",
+                               Species == "M. parvidens" ~ "Marmosops parvidens",
+                               Species == "Callicebus brunneus" ~ "Plecturocebus brunneus",
+                               Species == "Lagothrix cana" ~ "Lagothrix lagothricha",
+                               Species == "Saguinus fuscicollis" ~ "Leontocebus fuscicollis",
+                               Species == "S.sanborni." ~ "Sciurus sanborni",
+                               Species == "C. monticola" ~ "Philantomba monticola",
+                               Species == "C. sylvicultor" ~ "Cephalophus silvicultor",
+                               Species == "M. temama" ~ "Mazama temama",
+                               Species == "C. weynsi" ~ "Cephalophus weynsi",
+                               Species == "Procolobus gordonorum" ~ "Piliocolobus gordonorum",
+                               Species == "C. ogilby" ~ "Cephalophus ogilbyi",
+                               Species == "Syncerus caffer nanus" ~ "Syncerus caffer",
+                               Species == "and C. dorsalis castaneus" ~ "Cephalophus dorsalis",
+                               Species == "Galago alleni" ~ "Sciurocheirus alleni",
+                               Species == "Galagoides demidovii" ~ "Galagoides demidoff",
+                               Species == "C. ogilbyi" ~ "Cephalophus ogilbyi",
+                               Species == "Pongo pygmaeus morio" ~ "Pongo pygmaeus",
+                               Species == "Callicebus moloch" ~ "Plecturocebus moloch",
+                               Species == "Saguinus imperator" ~ "Tamarinus imperator",
+                               Species == "D. novemcinctus" ~ "Dasypus novemcinctus",
+                               Species == "M. nemorivaga" ~ "Mazama nemorivaga",
+                               Species == "Callicebus cupreus" ~ "Plecturocebus cupreus",
+                               Species == "C. moloch" ~ "Plecturocebus moloch",
+                               Species == "imperator" ~ "Tamarinus imperator",
+                               Species == "Pseudalopex culpaeus smithersi" ~ "Lycalopex culpaeus",
+                               Species == "C. silvicultor" ~ "Cephalophus silvicultor",
+                               Species == "C. nictitans" ~ "Cercopithecus nictitans",
+                               Species == "C. pogonias" ~ "Cercopithecus pogonias",
+                               Species == "Saguinus geoffroyi" ~ "Oedipomidas geoffroyi",
+                               .default = Species)) %>% 
+  select(!Study)%>% distinct() %>% filter(!is.na(IUCN.name))
+test <- BL.short.upd %>% left_join(aves.mam.iucn, by = c("IUCN.name"))
 
 write.csv(BL.short.upd, paste0(data.path,
                               "Data/Benitez-Lopez_2017/IUCN.BL.taxo.match.csv"))
@@ -534,6 +627,17 @@ write.csv(WM.corr, paste0(data.path,
                                "Data/WILDMEAT/IUCN.WM.taxo.match.csv"))
 
 ## Resovle taxonomy - Marshall/New LEMIS ---------------------------------------
+
+lemis.sp.ls <- LEMIS.species %>% 
+  filter(group_ == "Birds") %>%
+  select(corrected) %>% distinct()
+
+test <- lemis.sp.ls %>% left_join(aves.mam.iucn, by = c("corrected" = "IUCN.name")) %>%
+  filter(is.na(status))
+
+write.csv(test, paste0(data.path,
+                       "Data/LEMIS/lemis.to.correct.csv"))
+
 ## Resolve taxonomy - Tobias/AVONET data ---------------------------------------
 avonet.short <- avonet.df %>% select(Species1, Mass)
 
