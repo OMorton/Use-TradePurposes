@@ -130,10 +130,10 @@ write.csv(order.txt, paste0(data.path, "Data/IUCN/raw.iucn.verbose.txt.Jun25.csv
 ## Get use, threat and distribution data for all MAMMALS -----------------------
 mam.assessments <- rl_class(class = "Mammalia", latest = TRUE, key = API.key)
 
-## 5897 global assessments
+## 6025 global assessments
 mam.assess <- mam.assessments$assessments %>% as.data.frame() %>%
   mutate(scopes = as.character(scopes)) %>%
-  filter(scopes == "list(description = list(en = \"Global\"), code = \"1\")" )
+  filter(grepl("Global", scopes))
 
 write.csv(mam.assess, paste0(data.path, "Data/IUCN/mam.assess.metadata.csv"))
 
@@ -241,3 +241,52 @@ write.csv(order.location, paste0(data.path, "Data/IUCN/raw.iucn.location.MAMMALI
 write.csv(order.habs, paste0(data.path, "Data/IUCN/raw.iucn.habitats.MAMMALIA.Jul25.csv"))
 write.csv(order.realms, paste0(data.path, "Data/IUCN/raw.iucn.realms.MAMMALIA.Jul25.csv"))
 write.csv(order.txt, paste0(data.path, "Data/IUCN/raw.iucn.verbose.txt.MAMMALIA.Jul25.csv"))
+
+## Get synonyms ----------------------------
+
+aves.assess <- read.csv(paste0(data.path, "Data/IUCN/aves.assess.metadata.csv"))
+
+k <- 1
+syn.df <- data.frame()
+for (k in 1:nrow(aves.assess)){
+  
+  cat(k, "\n")
+  Sys.sleep(0.5)
+  sp.k <- aves.assess[k,]
+  
+  assmt.k <- rl_assessment(sp.k$assessment_id, key = API.key)
+  
+  if (is_empty(assmt.k$taxon$synonyms)) {
+    syn <- data.frame(IUCN.name = sp.k$taxon_scientific_name, syn.name = NA, status = NA)
+  }else{
+  syn <- assmt.k$taxon$synonyms %>% select(genus_name, species_name, status) %>%
+    unite("syn.name", 1:2, sep = " ") %>% distinct() %>%
+    mutate(IUCN.name = sp.k$taxon_scientific_name)
+  }
+  syn.df <- rbind(syn.df, syn)
+}
+write.csv(syn.df, paste0(data.path, "Data/IUCN/raw.iucn.synonyms.Jun25.csv"))
+
+## mammals
+mam.assess <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.csv"))
+
+k <- 1
+syn.df <- data.frame()
+for (k in 1:nrow(mam.assess)){
+  
+  cat(k, "\n")
+  Sys.sleep(0.5)
+  sp.k <- mam.assess[k,]
+  
+  assmt.k <- rl_assessment(sp.k$assessment_id, key = API.key)
+  
+  if (is_empty(assmt.k$taxon$synonyms)) {
+    syn <- data.frame(IUCN.name = sp.k$taxon_scientific_name, syn.name = NA, status = NA)
+  }else{
+    syn <- assmt.k$taxon$synonyms %>% select(genus_name, species_name, status) %>%
+      unite("syn.name", 1:2, sep = " ") %>% distinct() %>%
+      mutate(IUCN.name = sp.k$taxon_scientific_name)
+  }
+  syn.df <- rbind(syn.df, syn)
+}
+write.csv(syn.df, paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Jun25.csv"))
