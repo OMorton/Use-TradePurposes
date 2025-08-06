@@ -626,17 +626,52 @@ WM.corr <- WM.filt %>%
 write.csv(WM.corr, paste0(data.path,
                                "Data/WILDMEAT/IUCN.WM.taxo.match.csv"))
 
-## Resovle taxonomy - Marshall/New LEMIS ---------------------------------------
+## Resolve taxonomy - Marshall/New LEMIS ---------------------------------------
 
+mam.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Jun25.csv")) %>% filter(!is.na(syn.name))
+aves.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.Jun25.csv")) %>% filter(!is.na(syn.name))
+
+all.syns <- rbind(aves.syns, mam.syns)
+## 7376 lemis sp
 lemis.sp.ls <- LEMIS.species %>% 
-  filter(group_ == "Birds") %>%
+  #filter(group_ == "Birds") %>%
   select(corrected) %>% distinct()
 
 test <- lemis.sp.ls %>% left_join(aves.mam.iucn, by = c("corrected" = "IUCN.name")) %>%
   filter(is.na(status))
 
-write.csv(test, paste0(data.path,
+syn.match <- test %>% select(corrected) %>% left_join(all.syns, by = c("corrected" = "syn.name"))
+
+missing <- syn.match %>% filter(is.na(IUCN.name))
+syn.dir.cor <- syn.match %>% filter(!is.na(IUCN.name)) %>%
+  group_by(corrected) %>% filter(n()==1)
+syn.multi.corr <- syn.match %>% filter(!is.na(IUCN.name)) %>%
+  group_by(corrected) %>% filter(n()>1) %>%
+  filter(!IUCN.name %in% c("Clibanornis rufipectus", "Antrostomus arizonae",
+                           "Setophaga flavescens", "Hydrornis irena", 
+                           "Melopyrrha grandis"))
+## sift manually
+write.csv(syn.multi.corr, paste0(data.path,
+                          "Data/LEMIS/lemis.to.correct.multi.csv"))
+write.csv(missing, paste0(data.path,
                        "Data/LEMIS/lemis.to.correct.csv"))
+## read in corrected
+syn.mult.corr <- read.csv(paste0(data.path,"Data/LEMIS/lemis.corrected.multi.csv"))
+syn.corr <- read.csv(paste0(data.path,"Data/LEMIS/lemis.corrected.csv"))
+
+all.corr <- syn.corr %>% filter(!IUCN.name %in% c("EXTINCT", "DOMESTIC", "Not Assessed")) %>%
+  rbind(select(syn.mult.corr, corrected,  IUCN.name)) %>%
+  rbind(select(syn.dir.cor, corrected,  IUCN.name))
+
+lemis.iucn.fix <- lemis.sp.ls %>% left_join(aves.mam.iucn, by = c("corrected" = "IUCN.name")) %>%
+  filter(!is.na(status)) %>% select(-status, -common.name) %>%
+  mutate(IUCN.name = corrected) %>%
+  rbind(all.corr)
+
+## 7376 lemis sp matched to 7332 extant IUCN sp 
+# 43 were "EXTINCT", "DOMESTIC", "Not Assessed" and one was mislabelled and is a fish.
+write.csv(lemis.iucn.fix, paste0(data.path,
+                                "Data/LEMIS/IUCN.LEMIS.taxo.match.csv"))
 
 ## Resolve taxonomy - Tobias/AVONET data ---------------------------------------
 avonet.short <- avonet.df %>% select(Species1, Mass)
