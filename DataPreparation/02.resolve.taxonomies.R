@@ -69,6 +69,9 @@ Morton.species <- read.csv(paste0(data.path,
 LEMIS.species <- read.csv(paste0(data.path,
                                   "Data/LEMIS/aves.mam.raw.sp.list.csv"))
 
+## New CITES v2025.1
+CITES.species <- read.csv(paste0(data.path,
+                                 "Data/CITES/aves.mam.raw.sp.list.csv"))
 ## AVONET trait data
 avonet.df <- read.csv(paste0(data.path,
                                   "Data/Tobias.et.al.AVONET/AVONET.data.csv"))
@@ -672,6 +675,46 @@ lemis.iucn.fix <- lemis.sp.ls %>% left_join(aves.mam.iucn, by = c("corrected" = 
 # 43 were "EXTINCT", "DOMESTIC", "Not Assessed" and one was mislabelled and is a fish.
 write.csv(lemis.iucn.fix, paste0(data.path,
                                 "Data/LEMIS/IUCN.LEMIS.taxo.match.csv"))
+
+## Resolve taxonomy - CITES v2025.1 --------------------------------------------
+
+avo.match <- read.csv(paste0(data.path, "Data/Tobias.et.al.AVONET/IUCN.AVONET.taxo.match.csv"))
+
+CITES.ls <- CITES.species %>% distinct(Taxon) %>%
+  filter(!grepl("ssp", Taxon), !grepl("spp", Taxon),!grepl("hybrid", Taxon))
+
+intial <- CITES.ls %>% left_join(aves.mam.iucn, by = c("Taxon" = "IUCN.name")) 
+
+intial %>% filter(is.na(common.name)) %>%
+  left_join(lemis.iucn.fix, by = c("Taxon" = "corrected")) %>%
+  filter(is.na(IUCN.name)) %>%
+  left_join(avo.match, by = c("Taxon" = "AVONET.sp")) %>%
+  filter(is.na(IUCN.name.y)) %>%
+  write.csv(paste0(data.path,"Data/CITES/CITES.name.to.correct.csv"))
+
+cites.corr <- read.csv(paste0(data.path,"Data/CITES/CITES.name.corrected.csv"))
+
+upd.1 <- intial %>% filter(is.na(common.name)) %>%
+  left_join(lemis.iucn.fix, by = c("Taxon" = "corrected")) %>% 
+  filter(!is.na(IUCN.name)) %>% select(Taxon, IUCN.name)
+
+upd.2 <- intial %>% filter(is.na(common.name)) %>%
+  left_join(lemis.iucn.fix, by = c("Taxon" = "corrected")) %>%
+  filter(is.na(IUCN.name)) %>%
+  left_join(avo.match, by = c("Taxon" = "AVONET.sp")) %>%
+  filter(!is.na(IUCN.name.y)) %>%
+  select(Taxon, IUCN.name.y) %>% rename("IUCN.name" = "IUCN.name.y")
+
+intial.match <- select(filter(intial, !is.na(common.name)), -status, - common.name) %>%
+  mutate(IUCN.name = Taxon)
+
+cites.all.match <- rbind(intial.match,
+                         filter(cites.corr, IUCN.name != "NR"), upd.1, upd.2)
+
+## 2048 cites species matched to 2042
+# 6 were "EXTINCT", "DOMESTIC", "Not Assessed".
+write.csv(cites.all.match, paste0(data.path,
+                                 "Data/CITES/IUCN.CITES.taxo.match.csv"))
 
 ## Resolve taxonomy - Tobias/AVONET data ---------------------------------------
 avonet.short <- avonet.df %>% select(Species1, Mass)
