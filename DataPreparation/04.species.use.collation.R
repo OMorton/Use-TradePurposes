@@ -37,7 +37,13 @@ library(tidyverse)
 # Justification - global review of studies assessing the impacts of trade. Documents
 # species end use to the level of pet, consumption or assorted
 
-# 8. Wikipedia species accounts 
+# 8. Marshall et al. 2024/2025 Updated LEMIS database
+
+# 9. CITES v2025.1 Updated CITES database
+
+# 10. WiTIS TRAFFIC Database July 2025 version
+
+# 11. Wikipedia species accounts 
 # Justification - one of the few if not the only open access resource that collates
 # general data around species. Data has full class coverage all detail varies 
 # greatly between species. Can be used to assess if species are used and if given
@@ -128,6 +134,48 @@ Morton.sp <- Morton.df %>% filter(Class == "Aves") %>%
   pivot_wider(id_cols = IUCN.name, names_from = TP, values_from = use) %>%
   rename("Mort.UT.1" = "Bushmeat", "used.per.Mort" = "Assorted", "Mort.UT.13" = "Pet") %>%
   mutate(used.per.Mort = 1)
+
+## Processing - 8. Marshal et al. LEMIS data -----------------------------------
+lemis.df <-  read.csv(paste0(data.path,"Data/LEMIS/IUCN.LEMIS.taxo.match.csv")) %>%
+  select(-X, -X.1)
+
+unique(lemis.df$purpose) 
+# remove E (educational), B (breeding in captivity),
+#  L (law enforcement/foresic), Y (reintroduction to the wild), 
+# S (scientific - to broad to be definitively research and more than half the listed
+# species are only traded under the S code many are likely to be just research specimens or the like)
+# Keep H (purpose = Sport/hunting), T (commercial - no purpose), P (personal - no purpose)
+#  M (biomed - research), NA (unknown - no purpose),
+# * and non-standard value (unknown - no purpose), 
+# Zoos (Z)/botanic gardens (G)/circuses (Q) (if live fall under pets/display)
+
+unique(lemis.df$description) 
+
+lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S")) %>%
+  mutate(LEMIS.UT.15 = ifelse(purpose == "H"|description == "TRO", 1, 0),
+         LEMIS.UT.14 = ifelse(purpose %in% c("M"), 1, 0),
+         LEMIS.UT.13 = ifelse(purpose %in% c("Z", "G", "Q") & description == "LIV", 1, 0),
+         LEMIS.UT.12 = ifelse(description %in% c("BOC", "CAR", "HOC", "IJW", "IVC", "JWL") & 
+                                purpose != "H", 1, 0),
+         LEMIS.UT.10 = ifelse(description %in% c("GAR", "LPS", "SHO", "TRI") & 
+                                purpose != "H", 1, 0),
+         LEMIS.UT.6 = ifelse(description == "MUS" & purpose != "H", 1, 0),
+         LEMIS.UT.8 = ifelse(description == "FIB" & purpose != "H", 1, 0),
+         LEMIS.UT.3 = ifelse(description == "MED" & purpose != "H", 1, 0),
+         LEMIS.UT.11 = ifelse(description %in% c("KEY", "LPL", "PIV", "RUG") &
+                                purpose != "H", 1, 0))
+
+LEMIS.sp <- lemis.purp.long %>% group_by(IUCN.name) %>%
+  summarise(LEMIS.UT.15 = ifelse(sum(LEMIS.UT.15)>1, 1, 0),
+            LEMIS.UT.14 = ifelse(sum(LEMIS.UT.14)>1, 1, 0),
+            LEMIS.UT.13 = ifelse(sum(LEMIS.UT.13)>1, 1, 0),
+            LEMIS.UT.12 = ifelse(sum(LEMIS.UT.12)>1, 1, 0),
+            LEMIS.UT.10 = ifelse(sum(LEMIS.UT.10)>1, 1, 0),
+            LEMIS.UT.6 = ifelse(sum(LEMIS.UT.6)>1, 1, 0),
+            LEMIS.UT.8 = ifelse(sum(LEMIS.UT.8)>1, 1, 0),
+            LEMIS.UT.3 = ifelse(sum(LEMIS.UT.3)>1, 1, 0),
+            LEMIS.UT.11 = ifelse(sum(LEMIS.UT.11)>1, 1, 0),
+            used.per.LEMIS = 1)
 
 ## Collate full use database ---------------------------------------------------
 ## taxo for 11,195 sp (11,031 extant)
@@ -260,7 +308,8 @@ use.df <- use.raw.wiki %>%
                                    !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
                                    !is.na(WM.UT.1)|!is.na(MAN.Wiki.UT.1)|!is.na(MAN.Wiki.UT.13)|
                                    !is.na(MAN.Wiki.UT.15)|!is.na(MAN.Wiki.UT.12)|!is.na(MAN.Wiki.UT.3), 0, 1),
-            use = use)
+            use = use,
+            used.no.purpose = ifelse(no.purpose == 1 & use == 1, 1, 0))
 
-colSums(use.df[,6:19])
+colSums(use.df[,6:20])
 write.csv(use.df, paste0(data.path, "Outputs/use.dataset/Aves/aves.full.uses.tidy.csv"))
