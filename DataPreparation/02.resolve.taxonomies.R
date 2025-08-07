@@ -678,6 +678,8 @@ lemis.iucn.fix <- lemis.sp.ls %>% left_join(aves.mam.iucn, by = c("corrected" = 
 
 ## 7376 lemis sp matched to 7332 extant IUCN sp 
 # 43 were "EXTINCT", "DOMESTIC", "Not Assessed" and one was mislabelled and is a fish.
+# add metadata back
+lemis.iucn.fix <- lemis.iucn.fix %>% left_join(select(LEMIS.species, -X, -correctedGenus))
 write.csv(lemis.iucn.fix, paste0(data.path,
                                 "Data/LEMIS/IUCN.LEMIS.taxo.match.csv"))
 
@@ -718,6 +720,8 @@ cites.all.match <- rbind(intial.match,
 
 ## 2048 cites species matched to 2042
 # 6 were "EXTINCT", "DOMESTIC", "Not Assessed".
+# add metadata
+cites.all.match <- cites.all.match %>% distinct() %>% left_join(select(CITES.species, - X))
 write.csv(cites.all.match, paste0(data.path,
                                  "Data/CITES/IUCN.CITES.taxo.match.csv"))
 
@@ -754,6 +758,8 @@ upd.2 <-WiTIS.sp %>% left_join(aves.mam.iucn, by = c("Taxon" = "IUCN.name")) %>%
 ## 13 are extinct, hybrids or domestic breeds
 WiTIS.IUCN.match <- rbind(names.corr, upd.1, upd.2) %>%
   filter(!IUCN.name %in% c("EXTINCT", "DOMESTIC", "HYBRID"))
+WiTIS.IUCN.match <- WiTIS.IUCN.match %>% left_join(select(WiTIS.clean, Taxon, Category.of.Incident,
+                                      Item...Commodity.Type, Worked.Product.Type))
 write.csv(WiTIS.IUCN.match, paste0(data.path,
                                   "Data/WiTIS/IUCN.WiTIS.taxo.match.csv"))
 ## Resolve taxonomy - Tobias/AVONET data ---------------------------------------
