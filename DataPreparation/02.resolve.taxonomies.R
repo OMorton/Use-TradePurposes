@@ -72,6 +72,11 @@ LEMIS.species <- read.csv(paste0(data.path,
 ## New CITES v2025.1
 CITES.species <- read.csv(paste0(data.path,
                                  "Data/CITES/aves.mam.raw.sp.list.csv"))
+
+## WiTIS data 
+WiTIS.species <- read.csv(paste0(data.path,
+                                 "Data/WiTIS/incident-summary-and-species-2995.csv"))
+
 ## AVONET trait data
 avonet.df <- read.csv(paste0(data.path,
                                   "Data/Tobias.et.al.AVONET/AVONET.data.csv"))
@@ -716,6 +721,41 @@ cites.all.match <- rbind(intial.match,
 write.csv(cites.all.match, paste0(data.path,
                                  "Data/CITES/IUCN.CITES.taxo.match.csv"))
 
+## Resolve taxonomy - WiTIS ----------------------------------------------------
+WiTIS.clean <- WiTIS.species %>% filter(Class %in% c("Aves", "Mammalia"), Genus != "", Species!= "") %>%
+  mutate(Taxon = paste(Genus, Species))
+write.csv(WiTIS.clean, paste0(data.path,
+                              "Data/WiTIS/summary.species.clean.csv"))
+
+WiTIS.sp <- WiTIS.clean %>% select(Taxon) %>% distinct(Taxon)
+lemis.iucn.fix <- read.csv( paste0(data.path,
+                                 "Data/LEMIS/IUCN.LEMIS.taxo.match.csv"))
+WiTIS.sp %>% left_join(aves.mam.iucn, by = c("Taxon" = "IUCN.name")) %>%
+  filter(is.na(status)) %>%
+  left_join(lemis.iucn.fix, by = c("Taxon" = "corrected")) %>% 
+  filter(is.na(IUCN.name)) %>%
+  write.csv(paste0(data.path,
+                   "Data/WiTIS/names.to.correct.csv"))
+
+names.corr <- read.csv(paste0(data.path,
+                "Data/WiTIS/names.corrected.csv"))
+
+upd.1 <-WiTIS.sp %>% left_join(aves.mam.iucn, by = c("Taxon" = "IUCN.name")) %>%
+  filter(!is.na(status)) %>% select(Taxon) %>%
+  mutate(IUCN.name = Taxon)
+
+upd.2 <-WiTIS.sp %>% left_join(aves.mam.iucn, by = c("Taxon" = "IUCN.name")) %>%
+  filter(is.na(status)) %>%
+  left_join(lemis.iucn.fix, by = c("Taxon" = "corrected")) %>% 
+  filter(!is.na(IUCN.name)) %>%
+  select(Taxon, IUCN.name)
+
+## 1571 Witis species entries
+## 13 are extinct, hybrids or domestic breeds
+WiTIS.IUCN.match <- rbind(names.corr, upd.1, upd.2) %>%
+  filter(!IUCN.name %in% c("EXTINCT", "DOMESTIC", "HYBRID"))
+write.csv(WiTIS.IUCN.match, paste0(data.path,
+                                  "Data/WiTIS/IUCN.WiTIS.taxo.match.csv"))
 ## Resolve taxonomy - Tobias/AVONET data ---------------------------------------
 avonet.short <- avonet.df %>% select(Species1, Mass)
 
