@@ -85,7 +85,7 @@ for (i in 1:nrow(matched.mam.wiki.urls)) {
   # output
   wiki.text.df <- rbind(wiki.text.df, wiki.i)
 }
-# 48 NAs as supplied ()
+# 73 NAs as supplied ()
 check <- wiki.text.df %>% filter(is.na(text))
 # tidy where species binomial names link to two wikipedia pages (4 species)
 # collapse these to one string
@@ -182,9 +182,101 @@ wiki.key.search<- wiki.key.search %>%
 write.csv(wiki.key.search, 
           paste0(data.path, "Data/Wikipedia/wiki.use.match.raw.csv"))
 
-# Next step is to take the IUCN + other trade use database and match to this 
-# then all species with "novel" uses reported by Wiki can be investigated.
 
-                  
+## Text search - Mammals -------------------------------------------------------
+
+order.use.MAM <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Jul25.csv"))
+used.sp <- order.use.MAM %>% filter(!is.na(code)) #2472 rows
+used.sp %>% group_by(description) %>% tally()
+
+
+# Dominant use categories are classed as those with >50 species referenced, 
+# "Other" also has more than 50 is too vague to incorporate.
+# - Food (consumption, eaten, eating, delicacy, consumed, cooking, meat, bushmeat
+# bush meat, culinary, cuisine, for food)
+# - Pets (pet, cagebird, cage-bird, cage bird, collector, aviculture, aviculturist)
+# - Sport hunting (game bird, gamebird, sport shoot, sports shoot, drive, game,
+# recreational, waterfowling, fowling, open season, closed season)
+# - jewelry (ornamental, decorative, jewel, craft, handicrafts, artisanal,
+# decoration, earing, necklace, carving, adornment)
+# - medicine (medicine, medicinal, remedy, cure, curative, therapy, therapeutic,
+# healing, treat, treatment, charm)
+
+# generic (trade, market, sold, hunt, trapped, trapping, sustainable,
+# unsustainable, exploited, shot)
+
+# get wiki data
+wiki.all.text <- read.csv(paste0(data.path, "Data/Wikipedia/all.mammals.wiki.text.csv"))
+
+# define search strings
+# space are included where words are commonly prefaced or suffixed by exclusionary
+# terms e.g. trapped should flag, retrapped should not as it likely refers to banding.
+food.keywords <- c("\\bconsumption\\b", "\\beaten\\b", "\\beating\\b", 
+                   "\\bdelicacy\\b", "\\bconsumed\\b", 
+                   "\\bcooking\\b", "\\bmeat\\b", "\\bbushmeat\\b", "bush meat", "\\bculinary\\b",
+                   "\\bcuisine\\b")
+pet.keywords <- c("\\bpet\\b","\\bpet\\.", "\\bcagebird\\b", "\\bcage-bird\\b",
+                  "cage bird", "\\bcollector\\b", "\\baviculture\\b", 
+                  "\\baviculturist\\b", "\\bdomesticated\\b")
+sport.keywords <- c("\\bgame bird\\b", "\\bgamebird\\b", "\\bsport shoot\\b",
+                    "\\bsports shoot\\b", "\\bshoot\\b", "\\bdrive\\b", "\\bshot\\b",
+                    "\\bgame\\b", "\\brecreational\\b", "\\btrophy\\b",
+                    "\\bwaterfowling\\b", "\\bfowling\\b", "\\bopen season\\b",
+                    "\\bclosed season\\b")
+jewelry.keywords <- c("\\bornamental\\b", "\\bdecorative\\b", "\\bjewel", 
+                      "\\bhandicrafts\\b", "\\bartisanal", "\\bdecoration",
+                      "\\bearing", "\\bnecklace", "\\bcarving", "\\badornment")
+medicine.keywords <- c("\\bmedicine\\b", "\\bmedicinal\\b", "\\bremedy\\b", 
+                       "\\bcure\\b", "\\bcurative\\b", 
+                       "\\btherapy\\b", "\\btherapeutic\\b", "\\bhealing\\b", 
+                       "\\bcharm\\b", "\\bto treat\\b")
+clothing.keywords <- c("\\bpelts\\b", "\\bfurs\\b", "\\bhides\\b", 
+                       "\\bclothes\\b", "\\bcloth\\b", 
+                       "\\bclothing\\b", "\\bgarments\\b", "\\bcoat\\b", 
+                       "\\btrousers\\b", "\\bleather\\b", "\\bbelts\\b", "\\bshoe\\b")
+generic.keywords <- c("\\btrade\\b", "\\bmarket\\b", "\\bsold\\b", "\\bhunt\\b",
+                      "\\btrapped\\b", "\\btrapping\\b", "\\bsustainable\\b",
+                      "\\bunsustainable\\b", "\\bexploited\\b", "\\bshot\\b", 
+                      "\\bsubsistence\\b")
+
+# collapse
+food.str <- str_c(food.keywords, collapse = "|")
+pet.str <- str_c(pet.keywords, collapse = "|")
+sport.str <- str_c(sport.keywords, collapse = "|")
+jewelry.str <- str_c(jewelry.keywords, collapse = "|")
+medicine.str <- str_c(medicine.keywords, collapse = "|")
+clothing.str <- str_c(clothing.keywords, collapse = "|")
+generic.str <- str_c(generic.keywords, collapse = "|")
+
+# search
+wiki.key.search <- wiki.all.text %>%
+  mutate(food.UT.1 = str_detect(text, regex(food.str, ignore_case = TRUE)),
+         pet.UT.13 = str_detect(text, regex(pet.str, ignore_case = TRUE)),
+         sport.UT.15 = str_detect(text, regex(sport.str, ignore_case = TRUE)),
+         jewelry.UT.12 = str_detect(text, regex(jewelry.str, ignore_case = TRUE)),
+         medicine.UT.3 = str_detect(text, regex(medicine.str, ignore_case = TRUE)),
+         generic = str_detect(text, regex(generic.str, ignore_case = TRUE)),
+         # which words are detected
+         food.matches = str_extract_all(text, regex(food.str, ignore_case = TRUE)),
+         food.matches = sapply(food.matches, function(x) paste(unique(x), collapse = ", ")),
+         pet.matches = str_extract_all(text, regex(pet.str, ignore_case = TRUE)),
+         pet.matches = sapply(pet.matches, function(x) paste(unique(x), collapse = ", ")),
+         sport.matches = str_extract_all(text, regex(sport.str, ignore_case = TRUE)),
+         sport.matches = sapply(sport.matches, function(x) paste(unique(x), collapse = ", ")),
+         jewelry.matches = str_extract_all(text, regex(jewelry.str, ignore_case = TRUE)),
+         jewelry.matches = sapply(jewelry.matches, function(x) paste(unique(x), collapse = ", ")),
+         medicine.matches = str_extract_all(text, regex(medicine.str, ignore_case = TRUE)),
+         medicine.matches = sapply(medicine.matches, function(x) paste(unique(x), collapse = ", ")),
+         generic.matches = str_extract_all(text, regex(generic.str, ignore_case = TRUE)),
+         generic.matches = sapply(generic.matches, function(x) paste(unique(x), collapse = ", ")))
+
+wiki.key.search<- wiki.key.search %>% 
+  mutate(det = food.UT.1 + pet.UT.13 + sport.UT.15 + jewelry.UT.12 + medicine.UT.3 + generic)
+write.csv(wiki.key.search, 
+          paste0(data.path, "Data/Wikipedia/wiki.use.match.MAMMALIA.raw.csv"))
+
+
+
+## sense check
 test <- data.frame(text = c("petrel", "the pet was hunted", "the petrel is a seabird"))         
 test %>% mutate(pet = str_detect(text, regex(pet.str, ignore_case = TRUE)))
