@@ -38,6 +38,10 @@ library(tidyverse)
 # species end use to the level of pet, consumption or assorted
 
 # 8. Marshall et al. 2024/2025 Updated LEMIS database
+# Justification - one of the largest databases of traded species, does contain
+# purpose and type of species traded. Some of these codes can be combined to 
+# infer the end use, many cannot. Also contains records that will be removed 
+# (research, reintroduction trade etc.)
 
 # 9. CITES v2025.1 Updated CITES database
 
@@ -163,19 +167,62 @@ lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S"))
          LEMIS.UT.8 = ifelse(description == "FIB" & purpose != "H", 1, 0),
          LEMIS.UT.3 = ifelse(description == "MED" & purpose != "H", 1, 0),
          LEMIS.UT.11 = ifelse(description %in% c("KEY", "LPL", "PIV", "RUG") &
+                                purpose != "H", 1, 0),
+         LEMIS.UT.1 = ifelse(description %in% c("CAL", "CAV", "LEG", "MEA", "SOU") &
                                 purpose != "H", 1, 0))
 
 LEMIS.sp <- lemis.purp.long %>% group_by(IUCN.name) %>%
-  summarise(LEMIS.UT.15 = ifelse(sum(LEMIS.UT.15)>1, 1, 0),
-            LEMIS.UT.14 = ifelse(sum(LEMIS.UT.14)>1, 1, 0),
-            LEMIS.UT.13 = ifelse(sum(LEMIS.UT.13)>1, 1, 0),
-            LEMIS.UT.12 = ifelse(sum(LEMIS.UT.12)>1, 1, 0),
-            LEMIS.UT.10 = ifelse(sum(LEMIS.UT.10)>1, 1, 0),
-            LEMIS.UT.6 = ifelse(sum(LEMIS.UT.6)>1, 1, 0),
-            LEMIS.UT.8 = ifelse(sum(LEMIS.UT.8)>1, 1, 0),
-            LEMIS.UT.3 = ifelse(sum(LEMIS.UT.3)>1, 1, 0),
-            LEMIS.UT.11 = ifelse(sum(LEMIS.UT.11)>1, 1, 0),
+  summarise(LEMIS.UT.15 = ifelse(sum(LEMIS.UT.15)>=1, 1, 0),
+            LEMIS.UT.14 = ifelse(sum(LEMIS.UT.14)>=1, 1, 0),
+            LEMIS.UT.13 = ifelse(sum(LEMIS.UT.13)>=1, 1, 0),
+            LEMIS.UT.12 = ifelse(sum(LEMIS.UT.12)>=1, 1, 0),
+            LEMIS.UT.10 = ifelse(sum(LEMIS.UT.10)>=1, 1, 0),
+            LEMIS.UT.6 = ifelse(sum(LEMIS.UT.6)>=1, 1, 0),
+            LEMIS.UT.8 = ifelse(sum(LEMIS.UT.8)>=1, 1, 0),
+            LEMIS.UT.3 = ifelse(sum(LEMIS.UT.3)>=1, 1, 0),
+            LEMIS.UT.11 = ifelse(sum(LEMIS.UT.11)>=1, 1, 0),
+            LEMIS.UT.1 = ifelse(sum(LEMIS.UT.1)>=1, 1, 0),
             used.per.LEMIS = 1)
+
+## Processing - 9. CITES v2025.1 Updated CITES database ------------------------
+CITES.df <- read.csv(paste0(data.path, "Data/CITES/IUCN.CITES.taxo.match.csv")) %>%
+  select(-X)
+
+unique(CITES.df$Purpose)
+# REMOVE - B(breeding artifical prop), E (educational), L (law enforcement),
+# N reintroduction, S scientific
+
+# KEEP - G (botanical garden), H (hunting trophy), P (personal), Q (circus/travelling)
+# T (commerical), Z (zoo)  M (medical inc biomedical research cannot be clearly 
+# split between medicinal and research)
+sort(unique(CITES.df$Term))
+
+CITES.purp.long <- CITES.df %>% 
+  mutate(CITES.UT.15 = ifelse(Purpose == "H"|Term == "trophies", 1, 0),
+         CITES.UT.13 = ifelse(Purpose %in% c("Z", "G", "Q") & Term == "live", 1, 0),
+         CITES.UT.12 = ifelse(Term %in% c("bone carvings", "carvings", "horn carvings", "ivory carvings") & 
+                                Purpose != "H", 1, 0),
+         CITES.UT.8 = ifelse(Term == "fibres", 1, 0),
+         CITES.UT.11 = ifelse(Term %in% c("furniture", "leather products (large)", "sets of piano keys") &
+                                Purpose != "H", 1, 0),
+         CITES.UT.10 = ifelse(Term %in% c("garments", "leather products (small)", "shoes") & 
+                                Purpose != "H", 1, 0),
+         CITES.UT.1 = ifelse(Term %in% c("meat", "soup") & 
+                               Purpose != "H", 1, 0),
+         CITES.UT.3 = ifelse(Term == "medicine", 1, 0),
+         CITES.UT.6 = ifelse(Term == "musk", 1, 0))
+
+CITES.sp <- CITES.purp.long %>% group_by(IUCN.name) %>%
+  summarise(CITES.UT.15 = replace_na(ifelse(sum(CITES.UT.15, na.rm = T)>1, 1, 0), 0),
+            CITES.UT.13 = ifelse(sum(CITES.UT.13, na.rm = T)>=1, 1, 0),
+            CITES.UT.12 = ifelse(sum(CITES.UT.12, na.rm = T)>=1, 1, 0),
+            CITES.UT.8 = ifelse(sum(CITES.UT.8, na.rm = T)>=1, 1, 0),
+            CITES.UT.11 = ifelse(sum(CITES.UT.11, na.rm = T)>=1, 1, 0),
+            CITES.UT.10 = ifelse(sum(CITES.UT.10, na.rm = T)>=1, 1, 0),
+            CITES.UT.1 = ifelse(sum(CITES.UT.1, na.rm = T)>=1, 1, 0),
+            CITES.UT.3 = ifelse(sum(CITES.UT.3, na.rm = T)>=1, 1, 0),
+            CITES.UT.6 = ifelse(sum(CITES.UT.6, na.rm = T)>=1, 1, 0),
+            used.per.CITES = 1)
 
 ## Collate full use database ---------------------------------------------------
 ## taxo for 11,195 sp (11,031 extant)
