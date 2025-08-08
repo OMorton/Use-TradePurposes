@@ -59,9 +59,12 @@ data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al
 # what the end purpose is.
 
 ## Processing - 1. IUCN Use and Trade data ----------------------------------------
-IUCN.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv"))
+IUCN.AVES.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv")) %>% select(-X)
+IUCN.MAM.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Jul25.csv")) %>% select(-X)
 
-IUCN.use.tidy <- IUCN.use %>% 
+IUCN.use.all <- rbind(IUCN.AVES.use, IUCN.MAM.use)
+
+IUCN.use.tidy <- IUCN.use.all %>% 
   # keep only used sp
   filter(!is.na(code)) %>%
   mutate(international = ifelse(international == TRUE, "international", NA),
@@ -74,7 +77,7 @@ IUCN.use.tidy <- IUCN.use %>%
          level = gsub(", NA", "", level), 
          level = gsub("NA", "unknown", level))
 
-# 4839 species with a use per the IUCN U & T
+# 6371 species with a use per the IUCN U & T
 IUCN.use.sp <- IUCN.use.tidy %>%
   pivot_wider(id_cols = "IUCN.name", names_from = "code",
               values_from = "level") %>%
@@ -82,19 +85,35 @@ IUCN.use.sp <- IUCN.use.tidy %>%
 
 ## Processing - 2. IUCN Threat Classification table ----------------------------
 
-IUCN.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.Jun25.csv"))
+IUCN.AVES.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.Jun25.csv")) %>% select(-X)
+IUCN.MAM.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.MAMMALIA.Jul25.csv")) %>% select(-X)
 
-#1256 sp
-IUCN.thr.sp <- IUCN.thr %>% filter(code == "5_1_1") %>% 
+IUCN.thr.all <- rbind(IUCN.AVES.thr, IUCN.MAM.thr)
+
+#2434 sp
+IUCN.thr.sp <- IUCN.thr.all %>% filter(code == "5_1_1") %>% 
   mutate(used.per.BRU = 1) %>%
   select(IUCN.name, used.per.BRU)
 
 ## Processing - 3. IUCN SpUD database ------------------------------------------
 # focusing only on those extractive uses - e.g. not non extractive tourism
-spud.df <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.csv"))
+spud.AVES.df <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.csv")) %>% select(-X)
+spud.MAM.df <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.mam.taxo.match.csv"))%>% select(-X)
 
-## 98 species
+spud.df <- rbind(spud.MAM.df, spud.AVES.df)
+
+unique(spud.sp$Purpose)
+## 161 species
 spud.sp <- spud.df %>% group_by(IUCN.name) %>%
+  separate_longer_delim(Purpose, delim = ", ") %>%
+  filter(!Purpose %in% c("Learning and education", "Damage mitigation (to reduce impacts on rural people",
+                        "landscapes and activities)", "Conservation Management",
+                        "Damage mitigation", "Also killed in response to instances of human-wildlife conflict.",
+                        "Retaliatory", "Protection (of self and livestock)",
+                        "Killed in human-wildlife conflicts; animals destroyed crops or killed humans (elephants)",
+                        "Mitigation of Human-Wildlife conflict",
+                        "retaliatory killing", "Removal of alien invasive pest parrot species",
+                        "Poisining incidents")) %>%
   summarise(Purpose = toString(Purpose)) %>%
   mutate(SpUD.UT.1 = grepl("Food and feed", Purpose),
          SpUD.UT.3 = grepl("Medicine and hygiene", Purpose),
@@ -108,13 +127,14 @@ spud.sp <- spud.df %>% group_by(IUCN.name) %>%
          # Offer for sale/Commercial trade likewise not linked to use
          # Amusement likewise not linked to use
          # Monetary likewise not linked to use
+         # Scientific Research could be just movement of specimens for study tagging/ringing etc - not clearly a use
   ) %>%
   mutate(used.per.SpUD = 1) %>%
   select(-Purpose)
 
 ## Processing - 4. Benítez-López et al., 2017 Science --------------------------
 
-## 94 sp
+## 315 sp
 BenLop.df <- read.csv(paste0(data.path, "Data/Benitez-Lopez_2017/IUCN.BL.taxo.match.csv"))
 BenLop.sp <- BenLop.df %>% group_by(IUCN.name) %>%
   summarise(used.per.BenLop = 1,
@@ -131,15 +151,18 @@ Don.sp <- Don.df %>% filter(Trade.Prevalence.Score > 0) %>%
 ## Processing - 6. WILDMEAT Database -------------------------------------------
 WM.df <- read.csv(paste0(data.path,"Data/WILDMEAT/IUCN.WM.taxo.match.csv"))
 
-WM.sp <- WM.df %>% filter(Class == "Aves") %>%
+## 182 sp
+WM.sp <- WM.df %>%
   group_by(IUCN.name) %>%
   summarise(WM.UT.1 = 1, used.per.WM = 1)
 
 ## Processing - 7. Morton et al. 2021 ------------------------------------------
-Morton.df <- read.csv(paste0(data.path,"Data/Morton_et_al_2021/IUCN.Morton.taxo.match.csv"))
+Morton.df <- read.csv(paste0(data.path,"Data/Morton_et_al_2021/IUCN.Morton.taxo.match.csv")) %>% select(-X)
 
-Morton.sp <- Morton.df %>% filter(Class == "Aves") %>%
+# 120 sp
+Morton.sp <- Morton.df %>% 
   group_by(IUCN.name) %>% mutate(use = 1) %>%
+  select(IUCN.name, TP, use) %>% distinct() %>%
   pivot_wider(id_cols = IUCN.name, names_from = TP, values_from = use) %>%
   rename("Mort.UT.1" = "Bushmeat", "used.per.Mort" = "Assorted", "Mort.UT.13" = "Pet") %>%
   mutate(used.per.Mort = 1)
@@ -157,9 +180,7 @@ unique(lemis.df$purpose)
 # to be display trade but in reflection this is difficult to be certain off so is now removed.
 # Keep H (purpose = Sport/hunting), T (commercial - no purpose), P (personal - no purpose)
 #  M (biomed - research), NA (unknown - no purpose),
-# * and non-standard value (unknown - no purpose), 
-
-
+# * and non-standard value (unknown - no purpose),
 unique(lemis.df$description) 
 
 lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S", "Z", "G", "Q")) %>%
@@ -178,6 +199,7 @@ lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S", 
          LEMIS.UT.1 = ifelse(description %in% c("CAL", "CAV", "LEG", "MEA", "SOU") &
                                 purpose != "H", 1, 0))
 
+# 3315 sp
 LEMIS.sp <- lemis.purp.long %>% group_by(IUCN.name) %>%
   summarise(LEMIS.UT.15 = ifelse(sum(LEMIS.UT.15)>=1, 1, 0),
             LEMIS.UT.14 = ifelse(sum(LEMIS.UT.14)>=1, 1, 0),
@@ -221,6 +243,7 @@ CITES.purp.long <- CITES.df %>%
          CITES.UT.3 = ifelse(Term == "medicine", 1, 0),
          CITES.UT.6 = ifelse(Term == "musk", 1, 0))
 
+# 1699 sp
 CITES.sp <- CITES.purp.long %>% group_by(IUCN.name) %>%
   summarise(CITES.UT.15 = replace_na(ifelse(sum(CITES.UT.15, na.rm = T)>1, 1, 0), 0),
             #CITES.UT.13 = ifelse(sum(CITES.UT.13, na.rm = T)>=1, 1, 0),
@@ -257,6 +280,7 @@ WiTIS.purp.long <- WiTIS.df %>%
          WiTIS.UT.3 = ifelse(Item...Commodity.Type == "Wine", 1, 0),
          WiTIS.UT.6 = ifelse(Item...Commodity.Type == "Musk", 1, 0))
 
+# 1519 sp
 WiTIS.sp <- WiTIS.purp.long %>% group_by(IUCN.name) %>%
   summarise(WiTIS.UT.12 = replace_na(ifelse(sum(WiTIS.UT.12, na.rm = T)>1, 1, 0), 0),
             WiTIS.UT.3 = ifelse(sum(WiTIS.UT.3, na.rm = T)>=1, 1, 0),
@@ -265,17 +289,25 @@ WiTIS.sp <- WiTIS.purp.long %>% group_by(IUCN.name) %>%
 
 ## Collate full use database ---------------------------------------------------
 ## taxo for 11,195 sp (11,031 extant)
-iucn.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv")) %>%
-  select(IUCN.name, common.name, familyName, orderName, status)
+iucn.taxo.AVES <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv")) %>%
+  select(IUCN.name, common.name, familyName, orderName, status) %>% mutate(class = "Aves")
+iucn.taxo.MAM <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Jul25.csv"))%>%
+  select(IUCN.name, common.name, familyName, orderName, status) %>% mutate(class = "Mammalia")
 
-use.raw <- iucn.taxo  %>% filter(status != "EX") %>%
+# 17,220 species total, 16,971 extant species
+iucn.taxo <- rbind(iucn.taxo.MAM, iucn.taxo.AVES) %>% filter(status != "EX")
+
+use.raw <- iucn.taxo %>%
   left_join(IUCN.use.sp) %>%
   left_join(IUCN.thr.sp) %>%
   left_join(spud.sp) %>%
   left_join(BenLop.sp) %>%
   left_join(Don.sp)%>%
   left_join(WM.sp)%>%
-  left_join(Morton.sp)
+  left_join(Morton.sp) %>%
+  left_join(LEMIS.sp) %>%
+  left_join(CITES.sp) %>%
+  left_join(WiTIS.sp)
 
 use.raw <- use.raw %>% 
   mutate(used.per.UT = replace_na(used.per.UT, 0),
@@ -285,8 +317,12 @@ use.raw <- use.raw %>%
          used.per.Don = replace_na(used.per.Don, 0),
          used.per.Mort = replace_na(used.per.Mort, 0),
          used.per.WM = replace_na(used.per.WM, 0),
+         used.per.CITES = replace_na(used.per.CITES, 0),
+         used.per.LEMIS = replace_na(used.per.LEMIS, 0),
+         used.per.WiTIS = replace_na(used.per.WiTIS, 0),
     use = used.per.UT + used.per.BRU + used.per.SpUD + used.per.BenLop + 
-      used.per.Don + used.per.WM + used.per.Mort,
+      used.per.Don + used.per.WM + used.per.Mort + 
+      used.per.CITES + used.per.LEMIS + used.per.WiTIS,
     use = ifelse(use > 0, 1, 0),
     any.purpose = ifelse(!is.na(IUCN.UT.13)|!is.na(IUCN.UT.1)|!is.na(IUCN.UT.15)|
                          !is.na(IUCN.UT.3)|!is.na(IUCN.UT.11)|!is.na(IUCN.UT.17)|
@@ -295,10 +331,18 @@ use.raw <- use.raw %>%
                          !is.na(IUCN.UT.16)|!is.na(SpUD.UT.1)|!is.na(SpUD.UT.3)|
                          !is.na(SpUD.UT.12)|!is.na(SpUD.UT.13)|!is.na(SpUD.UT.15)|
                          !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
-                         !is.na(WM.UT.1), 1, 0))
+                         !is.na(WM.UT.1)|!is.na(LEMIS.UT.15)|!is.na(LEMIS.UT.14)|
+                         !is.na(LEMIS.UT.12)|!is.na(LEMIS.UT.10)|!is.na(LEMIS.UT.6)|
+                         !is.na(LEMIS.UT.8)|!is.na(LEMIS.UT.3)|!is.na(LEMIS.UT.11)|
+                         !is.na(LEMIS.UT.1)|!is.na(CITES.UT.15)|!is.na(CITES.UT.12)|
+                         !is.na(CITES.UT.8)|!is.na(CITES.UT.11)|!is.na(CITES.UT.10)|
+                         !is.na(CITES.UT.1)|!is.na(CITES.UT.3)|!is.na(CITES.UT.6)|
+                         !is.na(WiTIS.UT.12)|!is.na(WiTIS.UT.3)|!is.na(WiTIS.UT.6),
+                         1, 0))
 
-sum(use.raw$use) # 5736 (04/08/25)
-sum(use.raw$any.purpose) # 4809 (04/08/25)
+sum(use.raw$use) # 7918 (08/08/25)
+sum(use.raw$any.purpose) # 7301 (04/08/25)
+use.raw %>% group_by(class) %>% summarise(sum(use)) # 5908 birds, 2010 mammals
 
 ## Processing - additional Wikipedia filter ------------------------------------
 
