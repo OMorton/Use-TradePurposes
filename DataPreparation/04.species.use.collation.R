@@ -1,5 +1,6 @@
 
 library(tidyverse)
+data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
 ## Explanation -----------------------------------------------------------------
 
@@ -44,6 +45,10 @@ library(tidyverse)
 # (research, reintroduction trade etc.)
 
 # 9. CITES v2025.1 Updated CITES database
+# Justification - one of the largest databases of traded species, does contain
+# purpose and type of species traded. Some of these codes can be combined to 
+# infer the end use, many cannot. Also contains records that will be removed 
+# (research, reintroduction trade etc.)
 
 # 10. WiTIS TRAFFIC Database July 2025 version
 
@@ -148,17 +153,19 @@ unique(lemis.df$purpose)
 #  L (law enforcement/foresic), Y (reintroduction to the wild), 
 # S (scientific - to broad to be definitively research and more than half the listed
 # species are only traded under the S code many are likely to be just research specimens or the like)
+# orignally considered these Zoos (Z)/botanic gardens (G)/circuses (Q) (if live fall under pets/display)
+# to be display trade but in reflection this is difficult to be certain off so is now removed.
 # Keep H (purpose = Sport/hunting), T (commercial - no purpose), P (personal - no purpose)
 #  M (biomed - research), NA (unknown - no purpose),
 # * and non-standard value (unknown - no purpose), 
-# Zoos (Z)/botanic gardens (G)/circuses (Q) (if live fall under pets/display)
+
 
 unique(lemis.df$description) 
 
-lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S")) %>%
+lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S", "Z", "G", "Q")) %>%
   mutate(LEMIS.UT.15 = ifelse(purpose == "H"|description == "TRO", 1, 0),
          LEMIS.UT.14 = ifelse(purpose %in% c("M"), 1, 0),
-         LEMIS.UT.13 = ifelse(purpose %in% c("Z", "G", "Q") & description == "LIV", 1, 0),
+        # LEMIS.UT.13 = ifelse(purpose %in% c("Z", "G", "Q") & description == "LIV", 1, 0),
          LEMIS.UT.12 = ifelse(description %in% c("BOC", "CAR", "HOC", "IJW", "IVC", "JWL") & 
                                 purpose != "H", 1, 0),
          LEMIS.UT.10 = ifelse(description %in% c("GAR", "LPS", "SHO", "TRI") & 
@@ -174,7 +181,7 @@ lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S"))
 LEMIS.sp <- lemis.purp.long %>% group_by(IUCN.name) %>%
   summarise(LEMIS.UT.15 = ifelse(sum(LEMIS.UT.15)>=1, 1, 0),
             LEMIS.UT.14 = ifelse(sum(LEMIS.UT.14)>=1, 1, 0),
-            LEMIS.UT.13 = ifelse(sum(LEMIS.UT.13)>=1, 1, 0),
+            #LEMIS.UT.13 = ifelse(sum(LEMIS.UT.13)>=1, 1, 0),
             LEMIS.UT.12 = ifelse(sum(LEMIS.UT.12)>=1, 1, 0),
             LEMIS.UT.10 = ifelse(sum(LEMIS.UT.10)>=1, 1, 0),
             LEMIS.UT.6 = ifelse(sum(LEMIS.UT.6)>=1, 1, 0),
@@ -191,15 +198,17 @@ CITES.df <- read.csv(paste0(data.path, "Data/CITES/IUCN.CITES.taxo.match.csv")) 
 unique(CITES.df$Purpose)
 # REMOVE - B(breeding artifical prop), E (educational), L (law enforcement),
 # N reintroduction, S scientific
-
+# orignally considered these Zoos (Z)/botanic gardens (G)/circuses (Q) (if live fall under pets/display)
+# to be display trade but in reflection this is difficult to be certain off so is now removed.
 # KEEP - G (botanical garden), H (hunting trophy), P (personal), Q (circus/travelling)
 # T (commerical), Z (zoo)  M (medical inc biomedical research cannot be clearly 
 # split between medicinal and research)
 sort(unique(CITES.df$Term))
 
 CITES.purp.long <- CITES.df %>% 
+  filter(!Purpose %in% c("B", "E", "L", "N", "S", "Z", "G", "Q")) %>%
   mutate(CITES.UT.15 = ifelse(Purpose == "H"|Term == "trophies", 1, 0),
-         CITES.UT.13 = ifelse(Purpose %in% c("Z", "G", "Q") & Term == "live", 1, 0),
+         #CITES.UT.13 = ifelse(Purpose %in% c("Z", "G", "Q") & Term == "live", 1, 0),
          CITES.UT.12 = ifelse(Term %in% c("bone carvings", "carvings", "horn carvings", "ivory carvings") & 
                                 Purpose != "H", 1, 0),
          CITES.UT.8 = ifelse(Term == "fibres", 1, 0),
@@ -214,7 +223,7 @@ CITES.purp.long <- CITES.df %>%
 
 CITES.sp <- CITES.purp.long %>% group_by(IUCN.name) %>%
   summarise(CITES.UT.15 = replace_na(ifelse(sum(CITES.UT.15, na.rm = T)>1, 1, 0), 0),
-            CITES.UT.13 = ifelse(sum(CITES.UT.13, na.rm = T)>=1, 1, 0),
+            #CITES.UT.13 = ifelse(sum(CITES.UT.13, na.rm = T)>=1, 1, 0),
             CITES.UT.12 = ifelse(sum(CITES.UT.12, na.rm = T)>=1, 1, 0),
             CITES.UT.8 = ifelse(sum(CITES.UT.8, na.rm = T)>=1, 1, 0),
             CITES.UT.11 = ifelse(sum(CITES.UT.11, na.rm = T)>=1, 1, 0),
@@ -223,6 +232,36 @@ CITES.sp <- CITES.purp.long %>% group_by(IUCN.name) %>%
             CITES.UT.3 = ifelse(sum(CITES.UT.3, na.rm = T)>=1, 1, 0),
             CITES.UT.6 = ifelse(sum(CITES.UT.6, na.rm = T)>=1, 1, 0),
             used.per.CITES = 1)
+
+## Processing - 10. WiTIS TRAFFIC Database -------------------------------------
+WiTIS.df <- read.csv(paste0(data.path, "Data/WiTIS/IUCN.WiTIS.taxo.match.csv")) %>% select(-X)
+
+unique(WiTIS.df$Category.of.Incident)
+unique(WiTIS.df$Item...Commodity.Type)
+# "5. Animal Injury / Mortality / Welfare" 
+# reading highlights many of these are HWC, or unexplained deaths
+# 6. Human-Wildlife Conflict
+# not use or trade more persecution
+# 7. Breeding / Ranching - unclear if conservation or use
+# 4. Live Animals on Display (not for sale) 
+# only 1 example seems to refer to a zoo/pet lion playing with a dj
+
+WiTIS.purp.long <- WiTIS.df %>% 
+  filter(!Category.of.Incident %in% c("5. Animal Injury / Mortality / Welfare",
+                                      "6. Human-Wildlife Conflict", 
+                                      "7. Breeding / Ranching", 
+                                      "4. Live Animals on Display (not for sale)")) %>%
+  mutate(WiTIS.UT.12 = ifelse(Item...Commodity.Type %in% c("Bone - Worked", "Ivory - Worked",
+                                          "Carvings", "Horn - Worked"), 1, 0),
+         # WiTIS specific - all examples refer to tiger bone wine (medicinal use)
+         WiTIS.UT.3 = ifelse(Item...Commodity.Type == "Wine", 1, 0),
+         WiTIS.UT.6 = ifelse(Item...Commodity.Type == "Musk", 1, 0))
+
+WiTIS.sp <- WiTIS.purp.long %>% group_by(IUCN.name) %>%
+  summarise(WiTIS.UT.12 = replace_na(ifelse(sum(WiTIS.UT.12, na.rm = T)>1, 1, 0), 0),
+            WiTIS.UT.3 = ifelse(sum(WiTIS.UT.3, na.rm = T)>=1, 1, 0),
+            WiTIS.UT.6 = ifelse(sum(WiTIS.UT.6, na.rm = T)>=1, 1, 0),
+            used.per.WiTIS = 1)  
 
 ## Collate full use database ---------------------------------------------------
 ## taxo for 11,195 sp (11,031 extant)
