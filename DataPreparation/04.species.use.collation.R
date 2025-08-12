@@ -102,7 +102,7 @@ spud.MAM.df <- read.csv(paste0(data.path, "Data/SpUD/iucn.spud.mam.taxo.match.cs
 
 spud.df <- rbind(spud.MAM.df, spud.AVES.df)
 
-unique(spud.sp$Purpose)
+unique(spud.df$Purpose)
 ## 161 species
 spud.sp <- spud.df %>% group_by(IUCN.name) %>%
   separate_longer_delim(Purpose, delim = ", ") %>%
@@ -222,8 +222,8 @@ unique(CITES.df$Purpose)
 # N reintroduction, S scientific
 # orignally considered these Zoos (Z)/botanic gardens (G)/circuses (Q) (if live fall under pets/display)
 # to be display trade but in reflection this is difficult to be certain off so is now removed.
-# KEEP - G (botanical garden), H (hunting trophy), P (personal), Q (circus/travelling)
-# T (commerical), Z (zoo)  M (medical inc biomedical research cannot be clearly 
+# KEEP - H (hunting trophy), P (personal), 
+# T (commerical),  M (medical inc biomedical research cannot be clearly 
 # split between medicinal and research)
 sort(unique(CITES.df$Term))
 
@@ -267,7 +267,7 @@ unique(WiTIS.df$Item...Commodity.Type)
 # not use or trade more persecution
 # 7. Breeding / Ranching - unclear if conservation or use
 # 4. Live Animals on Display (not for sale) 
-# only 1 example seems to refer to a zoo/pet lion playing with a dj
+# only 1 example seems to refer to a zoo/pet lion playing with a DJ
 
 WiTIS.purp.long <- WiTIS.df %>% 
   filter(!Category.of.Incident %in% c("5. Animal Injury / Mortality / Welfare",
@@ -278,12 +278,14 @@ WiTIS.purp.long <- WiTIS.df %>%
                                           "Carvings", "Horn - Worked"), 1, 0),
          # WiTIS specific - all examples refer to tiger bone wine (medicinal use)
          WiTIS.UT.3 = ifelse(Item...Commodity.Type == "Wine", 1, 0),
+         WiTIS.UT.1 = ifelse(Item...Commodity.Type == "Meat", 1, 0),
          WiTIS.UT.6 = ifelse(Item...Commodity.Type == "Musk", 1, 0))
 
 # 1519 sp
 WiTIS.sp <- WiTIS.purp.long %>% group_by(IUCN.name) %>%
   summarise(WiTIS.UT.12 = replace_na(ifelse(sum(WiTIS.UT.12, na.rm = T)>1, 1, 0), 0),
             WiTIS.UT.3 = ifelse(sum(WiTIS.UT.3, na.rm = T)>=1, 1, 0),
+            WiTIS.UT.1 = ifelse(sum(WiTIS.UT.1, na.rm = T)>=1, 1, 0),
             WiTIS.UT.6 = ifelse(sum(WiTIS.UT.6, na.rm = T)>=1, 1, 0),
             used.per.WiTIS = 1)  
 
@@ -310,16 +312,8 @@ use.raw <- iucn.taxo %>%
   left_join(WiTIS.sp)
 
 use.raw <- use.raw %>% 
-  mutate(used.per.UT = replace_na(used.per.UT, 0),
-         used.per.BRU = replace_na(used.per.BRU, 0),
-         used.per.SpUD = replace_na(used.per.SpUD, 0),
-         used.per.BenLop = replace_na(used.per.BenLop, 0),
-         used.per.Don = replace_na(used.per.Don, 0),
-         used.per.Mort = replace_na(used.per.Mort, 0),
-         used.per.WM = replace_na(used.per.WM, 0),
-         used.per.CITES = replace_na(used.per.CITES, 0),
-         used.per.LEMIS = replace_na(used.per.LEMIS, 0),
-         used.per.WiTIS = replace_na(used.per.WiTIS, 0),
+  mutate(across(7:24, ~ replace_na(.x, "0")),
+         across(25:64, ~ replace_na(.x, 0)),
     use = used.per.UT + used.per.BRU + used.per.SpUD + used.per.BenLop + 
       used.per.Don + used.per.WM + used.per.Mort + 
       used.per.CITES + used.per.LEMIS + used.per.WiTIS,
@@ -339,14 +333,18 @@ use.raw <- use.raw %>%
                          !is.na(CITES.UT.1)|!is.na(CITES.UT.3)|!is.na(CITES.UT.6)|
                          !is.na(WiTIS.UT.12)|!is.na(WiTIS.UT.3)|!is.na(WiTIS.UT.6),
                          1, 0))
-
 sum(use.raw$use) # 7918 (08/08/25)
 sum(use.raw$any.purpose) # 7301 (04/08/25)
 use.raw %>% group_by(class) %>% summarise(sum(use)) # 5908 birds, 2010 mammals
 
 ## Processing - additional Wikipedia filter ------------------------------------
 
-wiki.uses.df <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.use.match.raw.csv"))
+wiki.uses.AVES.df <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.use.match.raw.csv")) %>% 
+  select(-X, -X.1)
+wiki.uses.MAM.df <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.use.match.MAMMALIA.raw.csv")) %>% 
+  select(-X, -X.1)
+
+wiki.uses.df <- rbind(wiki.uses.AVES.df, wiki.uses.MAM.df)
 
 # extract the positive hits per UT class
 wiki.UT.1 <- wiki.uses.df %>% filter(food.UT.1 == TRUE) %>% select(IUCN.name)
@@ -354,19 +352,29 @@ wiki.UT.13 <- wiki.uses.df %>% filter(pet.UT.13 == TRUE) %>% select(IUCN.name)
 wiki.UT.15 <- wiki.uses.df %>% filter(sport.UT.15 == TRUE) %>% select(IUCN.name)
 wiki.UT.12 <- wiki.uses.df %>% filter(jewelry.UT.12 == TRUE) %>% select(IUCN.name)
 wiki.UT.3 <- wiki.uses.df %>% filter(medicine.UT.3 == TRUE) %>% select(IUCN.name)
+wiki.UT.10 <- wiki.uses.df %>% filter(clothing.UT.10 == TRUE) %>% select(IUCN.name)
 wiki.USE <- wiki.uses.df %>% filter(generic == TRUE) %>% select(IUCN.name)
 
 # filter the species not currently flagged in that class that wikipedia suggests is
-UT.1.flag <- use.raw %>% filter(is.na(SpUD.UT.1) & is.na(BenLop.UT.1) & is.na(IUCN.UT.1)) %>%
+UT.1.flag <- use.raw %>% filter(is.na(SpUD.UT.1) & is.na(BenLop.UT.1) & is.na(IUCN.UT.1) &
+                                  is.na(Mort.UT.1) & is.na(WM.UT.1) & is.na(LEMIS.UT.1) &
+                                  is.na(CITES.UT.1)) %>%
   filter(IUCN.name %in% wiki.UT.1$IUCN.name)
-UT.13.flag <- use.raw %>% filter(is.na(SpUD.UT.13) & is.na(IUCN.UT.13)) %>%
+UT.13.flag <- use.raw %>% filter(is.na(SpUD.UT.13) & is.na(IUCN.UT.13) & 
+                                   is.na(Mort.UT.13)) %>%
   filter(IUCN.name %in% wiki.UT.13$IUCN.name)
-UT.15.flag <- use.raw %>% filter(is.na(SpUD.UT.15) & is.na(IUCN.UT.15)) %>%
+UT.15.flag <- use.raw %>% filter(is.na(SpUD.UT.15) & is.na(IUCN.UT.15) &
+                                   is.na(LEMIS.UT.15) & is.na(CITES.UT.15)) %>%
   filter(IUCN.name %in% wiki.UT.15$IUCN.name)
-UT.12.flag <- use.raw %>% filter(is.na(SpUD.UT.12) & is.na(IUCN.UT.12)) %>%
+UT.12.flag <- use.raw %>% filter(is.na(SpUD.UT.12) & is.na(IUCN.UT.12) &
+                                   is.na(LEMIS.UT.12) & is.na(CITES.UT.12)) %>%
   filter(IUCN.name %in% wiki.UT.12$IUCN.name)
-UT.3.flag <- use.raw %>% filter(is.na(SpUD.UT.3) & is.na(IUCN.UT.3)) %>%
+UT.3.flag <- use.raw %>% filter(is.na(SpUD.UT.3) & is.na(IUCN.UT.3) &
+                                  is.na(LEMIS.UT.3) & is.na(CITES.UT.3)) %>%
   filter(IUCN.name %in% wiki.UT.3$IUCN.name)
+UT.10.flag <- use.raw %>% filter(is.na(is.na(IUCN.UT.10) & is.na(LEMIS.UT.1 ) & 
+                                  is.na(CITES.UT.10))) %>%
+  filter(IUCN.name %in% wiki.UT.10$IUCN.name)
 USE.flag <- use.raw %>% filter(use==0) %>%
   filter(IUCN.name %in% wiki.USE$IUCN.name)
 
@@ -376,7 +384,7 @@ to.rev <- data.frame(IUCN.name = unique(c(UT.1.flag$IUCN.name, UT.13.flag$IUCN.n
                               UT.3.flag$IUCN.name, USE.flag$IUCN.name)))
 
 to.rev.out <- wiki.uses.df %>% select(-text) %>% 
-  filter(IUCN.name %in% to.rev$IUCN.name) %>% select(-X.1, -X)
+  filter(IUCN.name %in% to.rev$IUCN.name)
 
 write.csv(to.rev.out, paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.out.csv"))
 
@@ -385,15 +393,17 @@ write.csv(to.rev.out, paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.out.cs
 wiki.uses <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.in.csv"))
 wiki.uses <- wiki.uses %>% 
   select(IUCN.name, MAN.food.UT.1, MAN.pet.UT.13, MAN.sport.UT.15, 
-         MAN.jewelry.UT.12, MAN.medicine.UT.3, MAN.generic) %>% 
+         MAN.jewelry.UT.12, MAN.medicine.UT.3, MAN.apparel.UT.10, MAN.generic) %>% 
   rename("MAN.Wiki.UT.1" = "MAN.food.UT.1", "MAN.Wiki.UT.13" = "MAN.pet.UT.13",
          "MAN.Wiki.UT.15" = "MAN.sport.UT.15", "MAN.Wiki.UT.12" = "MAN.jewelry.UT.12",
-         "MAN.Wiki.UT.3" = "MAN.medicine.UT.3", "used.per.wiki" = "MAN.generic")
+         "MAN.Wiki.UT.3" = "MAN.medicine.UT.3","MAN.Wiki.UT.10" = "MAN.apparel.UT.10", 
+         "used.per.wiki" = "MAN.generic")
 
 use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
   mutate(used.per.wiki = replace_na(used.per.wiki, 0),
          use = used.per.UT + used.per.BRU + used.per.SpUD + used.per.BenLop + 
-           used.per.Don + used.per.WM + used.per.Mort + used.per.wiki,
+           used.per.Don + used.per.WM + used.per.Mort + 
+           used.per.CITES + used.per.LEMIS + used.per.WiTIS + used.per.wiki,
          use = ifelse(use > 0, 1, 0),
          any.purpose = ifelse(!is.na(IUCN.UT.13)|!is.na(IUCN.UT.1)|!is.na(IUCN.UT.15)|
                                 !is.na(IUCN.UT.3)|!is.na(IUCN.UT.11)|!is.na(IUCN.UT.17)|
@@ -402,12 +412,20 @@ use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
                                 !is.na(IUCN.UT.16)|!is.na(SpUD.UT.1)|!is.na(SpUD.UT.3)|
                                 !is.na(SpUD.UT.12)|!is.na(SpUD.UT.13)|!is.na(SpUD.UT.15)|
                                 !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
-                                !is.na(WM.UT.1)|!is.na(MAN.Wiki.UT.1)|!is.na(MAN.Wiki.UT.13)|
-                                !is.na(MAN.Wiki.UT.15)|!is.na(MAN.Wiki.UT.12)|!is.na(MAN.Wiki.UT.3), 1, 0))
+                                !is.na(WM.UT.1)|!is.na(LEMIS.UT.15)|!is.na(LEMIS.UT.14)|
+                                !is.na(LEMIS.UT.12)|!is.na(LEMIS.UT.10)|!is.na(LEMIS.UT.6)|
+                                !is.na(LEMIS.UT.8)|!is.na(LEMIS.UT.3)|!is.na(LEMIS.UT.11)|
+                                !is.na(LEMIS.UT.1)|!is.na(CITES.UT.15)|!is.na(CITES.UT.12)|
+                                !is.na(CITES.UT.8)|!is.na(CITES.UT.11)|!is.na(CITES.UT.10)|
+                                !is.na(CITES.UT.1)|!is.na(CITES.UT.3)|!is.na(CITES.UT.6)|
+                                !is.na(WiTIS.UT.12)|!is.na(WiTIS.UT.3)|!is.na(WiTIS.UT.6)|
+                                !is.na(MAN.Wiki.UT.1)|!is.na(MAN.Wiki.UT.13)|
+                                !is.na(MAN.Wiki.UT.15)|!is.na(MAN.Wiki.UT.12)|
+                                !is.na(MAN.Wiki.UT.3)|!is.na(MAN.Wiki.UT.10), 1, 0))
 
-sum(use.raw.wiki$use) # 5742 (04/08/25)
-sum(use.raw.wiki$any.purpose) # 4840 (04/08/25)
-write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/Aves/aves.full.uses.raw.csv"))
+sum(use.raw.wiki$use) # 7926 (12/08/25)
+sum(use.raw.wiki$any.purpose) # 7359 (04/08/25)
+write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.csv"))
 
 
 ## Tidy up final dataset -------------------------------------------------------
@@ -416,28 +434,46 @@ sort(colnames(use.raw.wiki))
 use.df <- use.raw.wiki %>%
   group_by(IUCN.name, common.name, familyName, orderName, status) %>%
   summarise(food.hum.1 = ifelse(!is.na(IUCN.UT.1)|!is.na(SpUD.UT.1)|!is.na(BenLop.UT.1)|
-                                  !is.na(WM.UT.1)|!is.na(Mort.UT.1)|!is.na(MAN.Wiki.UT.1), 1, 0),
+                                  !is.na(WM.UT.1)|!is.na(Mort.UT.1)|!is.na(LEMIS.UT.1)|
+                                  !is.na(CITES.UT.1)|!is.na(WiTIS.UT.1)|!is.na(MAN.Wiki.UT.1), 1, 0),
             food.an.2 = ifelse(!is.na(IUCN.UT.2), 1, 0),
-            med.3 = ifelse(!is.na(IUCN.UT.3)|!is.na(SpUD.UT.3)|!is.na(MAN.Wiki.UT.3), 1, 0),
+            med.3 = ifelse(!is.na(IUCN.UT.3)|!is.na(SpUD.UT.3)|!is.na(MAN.Wiki.UT.3)|
+                             !is.na(LEMIS.UT.3)|!is.na(CITES.UT.3)|!is.na(WiTIS.UT.3), 1, 0),
+            other.chem.6 = ifelse(!is.na(IUCN.UT.6)|!is.na(LEMIS.UT.6)|!is.na(CITES.UT.6)|
+                                    !is.na(WiTIS.UT.6), 1, 0),
             fuels.7 = ifelse(!is.na(IUCN.UT.7), 1, 0),
-            apparel.10 = ifelse(!is.na(IUCN.UT.10), 1, 0),
-            other.household.11 = ifelse(!is.na(IUCN.UT.11), 1, 0),
-            jewellery.12 = ifelse(!is.na(IUCN.UT.12)|!is.na(MAN.Wiki.UT.12)|!is.na(SpUD.UT.12), 1, 0),
+            apparel.10 = ifelse(!is.na(IUCN.UT.10)|!is.na(LEMIS.UT.10)|
+                                  !is.na(CITES.UT.10), 1, 0),
+            other.household.11 = ifelse(!is.na(IUCN.UT.11)|!is.na(LEMIS.UT.11)|
+                                          !is.na(CITES.UT.11), 1, 0),
+            jewellery.12 = ifelse(!is.na(IUCN.UT.12)|!is.na(MAN.Wiki.UT.12)|
+                                    !is.na(SpUD.UT.12)|!is.na(LEMIS.UT.12)|
+                                    !is.na(CITES.UT.12)|!is.na(WiTIS.UT.12), 1, 0),
             pets.13 = ifelse(!is.na(IUCN.UT.13)|!is.na(MAN.Wiki.UT.13)|!is.na(SpUD.UT.13)|
                                !is.na(Mort.UT.13), 1, 0),
             research.14 = ifelse(!is.na(IUCN.UT.14), 1, 0),
-            sport.15 = ifelse(!is.na(IUCN.UT.15)|!is.na(MAN.Wiki.UT.15)|!is.na(SpUD.UT.15), 1, 0),
+            sport.15 = ifelse(!is.na(IUCN.UT.15)|!is.na(MAN.Wiki.UT.15)|
+                                !is.na(SpUD.UT.15)|!is.na(LEMIS.UT.15)|
+                                !is.na(CITES.UT.15), 1, 0),
             ex.situ.16 = ifelse(!is.na(IUCN.UT.16), 1, 0),
             other.16 = ifelse(!is.na(IUCN.UT.17), 1, 0),
             no.purpose = ifelse(!is.na(IUCN.UT.13)|!is.na(IUCN.UT.1)|!is.na(IUCN.UT.15)|
-                                   !is.na(IUCN.UT.3)|!is.na(IUCN.UT.11)|!is.na(IUCN.UT.17)|
-                                   !is.na(IUCN.UT.12)|!is.na(IUCN.UT.18)|!is.na(IUCN.UT.7)|
-                                   !is.na(IUCN.UT.14)|!is.na(IUCN.UT.10)|!is.na(IUCN.UT.2)|
-                                   !is.na(IUCN.UT.16)|!is.na(SpUD.UT.1)|!is.na(SpUD.UT.3)|
-                                   !is.na(SpUD.UT.12)|!is.na(SpUD.UT.13)|!is.na(SpUD.UT.15)|
-                                   !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
-                                   !is.na(WM.UT.1)|!is.na(MAN.Wiki.UT.1)|!is.na(MAN.Wiki.UT.13)|
-                                   !is.na(MAN.Wiki.UT.15)|!is.na(MAN.Wiki.UT.12)|!is.na(MAN.Wiki.UT.3), 0, 1),
+                                  !is.na(IUCN.UT.3)|!is.na(IUCN.UT.11)|!is.na(IUCN.UT.17)|
+                                  !is.na(IUCN.UT.12)|!is.na(IUCN.UT.18)|!is.na(IUCN.UT.7)|
+                                  !is.na(IUCN.UT.14)|!is.na(IUCN.UT.10)|!is.na(IUCN.UT.2)|
+                                  !is.na(IUCN.UT.16)|!is.na(SpUD.UT.1)|!is.na(SpUD.UT.3)|
+                                  !is.na(SpUD.UT.12)|!is.na(SpUD.UT.13)|!is.na(SpUD.UT.15)|
+                                  !is.na(BenLop.UT.1)|!is.na(Mort.UT.1)|!is.na(Mort.UT.13)|
+                                  !is.na(WM.UT.1)|!is.na(LEMIS.UT.15)|!is.na(LEMIS.UT.14)|
+                                  !is.na(LEMIS.UT.12)|!is.na(LEMIS.UT.10)|!is.na(LEMIS.UT.6)|
+                                  !is.na(LEMIS.UT.8)|!is.na(LEMIS.UT.3)|!is.na(LEMIS.UT.11)|
+                                  !is.na(LEMIS.UT.1)|!is.na(CITES.UT.15)|!is.na(CITES.UT.12)|
+                                  !is.na(CITES.UT.8)|!is.na(CITES.UT.11)|!is.na(CITES.UT.10)|
+                                  !is.na(CITES.UT.1)|!is.na(CITES.UT.3)|!is.na(CITES.UT.6)|
+                                  !is.na(WiTIS.UT.12)|!is.na(WiTIS.UT.3)|!is.na(WiTIS.UT.6)|
+                                  !is.na(MAN.Wiki.UT.1)|!is.na(MAN.Wiki.UT.13)|
+                                  !is.na(MAN.Wiki.UT.15)|!is.na(MAN.Wiki.UT.12)|
+                                  !is.na(MAN.Wiki.UT.3)|!is.na(MAN.Wiki.UT.10), 0, 1),
             use = use,
             used.no.purpose = ifelse(no.purpose == 1 & use == 1, 1, 0))
 
