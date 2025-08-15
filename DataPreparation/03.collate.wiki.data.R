@@ -142,6 +142,10 @@ medicine.keywords <- c("\\bmedicine\\b", "\\bmedicinal\\b", "\\bremedy\\b",
                        "\\bcure\\b", "\\bcurative\\b", 
                        "\\btherapy\\b", "\\btherapeutic\\b", "\\bhealing\\b", 
                        "\\bcharm\\b", "\\bto treat\\b")
+clothing.keywords <- c("\\bpelts\\b", "\\bfurs\\b", "\\bhides\\b", 
+                       "\\bclothes\\b", "\\bcloth\\b", "\\bleather\\b",
+                       "\\bclothing\\b", "\\bgarments\\b", "\\bcoat\\b", 
+                       "\\btrousers\\b", "\\bleather\\b", "\\bbelts\\b", "\\bshoe\\b")
 generic.keywords <- c("\\btrade\\b", "\\bmarket\\b", "\\bsold\\b", "\\bhunt\\b",
                       "\\btrapped\\b", "\\btrapping\\b", "\\bsustainable\\b",
                       "\\bunsustainable\\b", "\\bexploited\\b", "\\bshot\\b", 
@@ -153,6 +157,7 @@ pet.str <- str_c(pet.keywords, collapse = "|")
 sport.str <- str_c(sport.keywords, collapse = "|")
 jewelry.str <- str_c(jewelry.keywords, collapse = "|")
 medicine.str <- str_c(medicine.keywords, collapse = "|")
+clothing.str <- str_c(clothing.keywords, collapse = "|")
 generic.str <- str_c(generic.keywords, collapse = "|")
 
 # search
@@ -162,6 +167,7 @@ wiki.key.search <- wiki.all.text %>%
          sport.UT.15 = str_detect(text, regex(sport.str, ignore_case = TRUE)),
          jewelry.UT.12 = str_detect(text, regex(jewelry.str, ignore_case = TRUE)),
          medicine.UT.3 = str_detect(text, regex(medicine.str, ignore_case = TRUE)),
+         clothing.UT.10 = str_detect(text, regex(clothing.str, ignore_case = TRUE)),
          generic = str_detect(text, regex(generic.str, ignore_case = TRUE)),
          # which words are detected
          food.matches = str_extract_all(text, regex(food.str, ignore_case = TRUE)),
@@ -174,11 +180,14 @@ wiki.key.search <- wiki.all.text %>%
          jewelry.matches = sapply(jewelry.matches, function(x) paste(unique(x), collapse = ", ")),
          medicine.matches = str_extract_all(text, regex(medicine.str, ignore_case = TRUE)),
          medicine.matches = sapply(medicine.matches, function(x) paste(unique(x), collapse = ", ")),
+         clothing.matches = str_extract_all(text, regex(clothing.str, ignore_case = TRUE)),
+         clothing.matches = sapply(clothing.matches, function(x) paste(unique(x), collapse = ", ")),
          generic.matches = str_extract_all(text, regex(generic.str, ignore_case = TRUE)),
          generic.matches = sapply(generic.matches, function(x) paste(unique(x), collapse = ", ")))
 
 wiki.key.search<- wiki.key.search %>% 
-  mutate(det = food.UT.1 + pet.UT.13 + sport.UT.15 + jewelry.UT.12 + medicine.UT.3 + generic)
+  mutate(det = food.UT.1 + pet.UT.13 + sport.UT.15 + jewelry.UT.12 +
+           medicine.UT.3 + clothing.UT.10 + generic)
 write.csv(wiki.key.search, 
           paste0(data.path, "Data/Wikipedia/wiki.use.match.raw.csv"))
 
@@ -231,7 +240,7 @@ medicine.keywords <- c("\\bmedicine\\b", "\\bmedicinal\\b", "\\bremedy\\b",
                        "\\btherapy\\b", "\\btherapeutic\\b", "\\bhealing\\b", 
                        "\\bcharm\\b", "\\bto treat\\b")
 clothing.keywords <- c("\\bpelts\\b", "\\bfurs\\b", "\\bhides\\b", 
-                       "\\bclothes\\b", "\\bcloth\\b", 
+                       "\\bclothes\\b", "\\bcloth\\b", "\\bleather\\b",
                        "\\bclothing\\b", "\\bgarments\\b", "\\bcoat\\b", 
                        "\\btrousers\\b", "\\bleather\\b", "\\bbelts\\b", "\\bshoe\\b")
 generic.keywords <- c("\\btrade\\b", "\\bmarket\\b", "\\bsold\\b", "\\bhunt\\b",
@@ -255,6 +264,7 @@ wiki.key.search <- wiki.all.text %>%
          sport.UT.15 = str_detect(text, regex(sport.str, ignore_case = TRUE)),
          jewelry.UT.12 = str_detect(text, regex(jewelry.str, ignore_case = TRUE)),
          medicine.UT.3 = str_detect(text, regex(medicine.str, ignore_case = TRUE)),
+         clothing.UT.10 = str_detect(text, regex(clothing.str, ignore_case = TRUE)),
          generic = str_detect(text, regex(generic.str, ignore_case = TRUE)),
          # which words are detected
          food.matches = str_extract_all(text, regex(food.str, ignore_case = TRUE)),
@@ -267,11 +277,14 @@ wiki.key.search <- wiki.all.text %>%
          jewelry.matches = sapply(jewelry.matches, function(x) paste(unique(x), collapse = ", ")),
          medicine.matches = str_extract_all(text, regex(medicine.str, ignore_case = TRUE)),
          medicine.matches = sapply(medicine.matches, function(x) paste(unique(x), collapse = ", ")),
+         clothing.matches = str_extract_all(text, regex(clothing.str, ignore_case = TRUE)),
+         clothing.matches = sapply(clothing.matches, function(x) paste(unique(x), collapse = ", ")),
          generic.matches = str_extract_all(text, regex(generic.str, ignore_case = TRUE)),
          generic.matches = sapply(generic.matches, function(x) paste(unique(x), collapse = ", ")))
 
 wiki.key.search<- wiki.key.search %>% 
-  mutate(det = food.UT.1 + pet.UT.13 + sport.UT.15 + jewelry.UT.12 + medicine.UT.3 + generic)
+  mutate(det = food.UT.1 + pet.UT.13 + sport.UT.15 + jewelry.UT.12 + 
+           medicine.UT.3 + clothing.UT.10 + generic)
 write.csv(wiki.key.search, 
           paste0(data.path, "Data/Wikipedia/wiki.use.match.MAMMALIA.raw.csv"))
 
