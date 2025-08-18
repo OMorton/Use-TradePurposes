@@ -85,6 +85,14 @@ avonet.df <- read.csv(paste0(data.path,
 bird.lh.df <- read.csv(paste0(data.path,
                              "Data/Bird.et.al.2020/GenLengths.Table.S4.csv"))
 
+## Santageli et al Aesthetics data
+santageli.df <- read.csv(paste0(data.path,
+                              "Data/Santageli_et_al_Aesthetics/Santagelli_2023.csv"))
+
+## Soria et al. Mammal trait database 
+soria.df <- read.csv(paste0(data.path,
+                             "Data/Soria.et.al.COMBINE/trait_data_imputed.csv"))
+
 ## Resolve taxonomy - Donald et al. 2024 ---------------------------------------
 
 
@@ -900,7 +908,26 @@ BirdLH.match <- iucn.taxo.short %>% left_join(avo.match) %>%
                                IUCN.name == "Kurochkinegramma hypogrammica" ~"Arachnothera hypogrammica",
                                IUCN.name == "Paragallinula angulata" ~"Gallinula angulata",
                                IUCN.name == "Porphyriops melanops" ~"Gallinula melanops",
-                               .default = IUCN.name)) %>% select(Adult.survival)
+                               .default = BirdLH.sp)) %>% 
+  select(-Adult.survival, - common.name, - status)
 
 write.csv(BirdLH.match, paste0(data.path,
                                 "Data/Bird.et.al.2020/IUCN.BirdLH.taxo.match.csv"))
+
+## Resolve taxonomy - Santageli et al., 2023 -----------------------------------
+santageli.df %>% select(sciName_HBWBLv5) %>% filter(!is.na(sciName_HBWBLv5)) %>% 
+  distinct() %>% mutate(pres = 1) # ~9400 species
+
+## Resolve taxonomy - Soria et al., 2023 ---------------------------------------
+mam.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Jun25.csv")) %>% 
+  filter(!is.na(syn.name)) %>% select(-X)
+
+soria.short <- soria.df %>% select(iucn2020_binomial, phylacine_binomial) 
+
+f <- iucn.mam.taxo.short %>% 
+  left_join(soria.short, by = c("IUCN.name" = "iucn2020_binomial")) %>% 
+  filter(is.na(phylacine_binomial))
+
+syn.join <- mam.syns %>% filter(IUCN.name %in% f$IUCN.name) %>% 
+  left_join(soria.short, by = c("syn.name" = "iucn2020_binomial"))
+
