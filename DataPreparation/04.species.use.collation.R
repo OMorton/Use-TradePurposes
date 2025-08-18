@@ -181,6 +181,7 @@ unique(lemis.df$purpose)
 # Keep H (purpose = Sport/hunting), T (commercial - no purpose), P (personal - no purpose)
 #  M (biomed - research), NA (unknown - no purpose),
 # * and non-standard value (unknown - no purpose),
+# meat is unclear - likely for humans (but could be for animal feed or medicinal use)
 unique(lemis.df$description) 
 
 lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S", "Z", "G", "Q")) %>%
@@ -196,7 +197,7 @@ lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S", 
          LEMIS.UT.3 = ifelse(description == "MED" & purpose != "H", 1, 0),
          LEMIS.UT.11 = ifelse(description %in% c("KEY", "LPL", "PIV", "RUG") &
                                 purpose != "H", 1, 0),
-         LEMIS.UT.1 = ifelse(description %in% c("CAL", "CAV", "LEG", "MEA", "SOU") &
+         LEMIS.UT.1 = ifelse(description %in% c("CAL", "CAV", "LEG", "SOU") &
                                 purpose != "H", 1, 0))
 
 # 3315 sp
@@ -225,6 +226,7 @@ unique(CITES.df$Purpose)
 # KEEP - H (hunting trophy), P (personal), 
 # T (commerical),  M (medical inc biomedical research cannot be clearly 
 # split between medicinal and research)
+# meat is unclear - likely for humans (but could be for animal feed or medicinal use)
 sort(unique(CITES.df$Term))
 
 CITES.purp.long <- CITES.df %>% 
@@ -238,7 +240,7 @@ CITES.purp.long <- CITES.df %>%
                                 Purpose != "H", 1, 0),
          CITES.UT.10 = ifelse(Term %in% c("garments", "leather products (small)", "shoes") & 
                                 Purpose != "H", 1, 0),
-         CITES.UT.1 = ifelse(Term %in% c("meat", "soup") & 
+         CITES.UT.1 = ifelse(Term %in% c("soup") & 
                                Purpose != "H", 1, 0),
          CITES.UT.3 = ifelse(Term == "medicine", 1, 0),
          CITES.UT.6 = ifelse(Term == "musk", 1, 0))
@@ -468,8 +470,8 @@ use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
                                 MAN.Wiki.UT.3 == 1 |MAN.Wiki.UT.10 == 1, 1, 0))
   
 
-sum(use.raw.wiki$use) # 7926 (12/08/25) 8759
-sum(use.raw.wiki$any.purpose) # 7359 (04/08/25) 6817
+sum(use.raw.wiki$use) # (12/08/25) 8759
+sum(use.raw.wiki$any.purpose) # (12/08/25) 6807
 use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6344, 2415
 write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.csv"))
 
@@ -527,7 +529,17 @@ use.df <- use.raw.wiki %>%
             used.no.purpose = ifelse(no.purpose == 1 & use == 1, 1, 0))
 
 colSums(use.df[,6:21])
-write.csv(use.df, paste0(data.path, "Outputs/use.dataset/Aves/aves.full.uses.tidy.csv"))
+
+## add class
+mam.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Jul25.csv"))
+aves.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv"))
+class.df <- rbind(mam.taxo %>% select(IUCN.name) %>% mutate(Class = "Mammalia"),
+                  aves.taxo %>% select(IUCN.name) %>% mutate(Class = "Aves"))
+
+use.df <- use.df %>% 
+  left_join(class.df)
+
+write.csv(use.df, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.csv"))
 
 ## manual checking
 t <- use.raw.wiki %>% select(IUCN.name, use, contains("15")) %>%
