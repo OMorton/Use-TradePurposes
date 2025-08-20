@@ -4,6 +4,8 @@ library(terra)
 library(rnaturalearth)
 library(tidyterra)
 library(ggpubr)
+library(png)
+library(grid)
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
@@ -57,14 +59,22 @@ use.plt <- ggplot(use.status.sum, aes(use.coarse, sp.count, fill = status)) +
   ylab("Species") +
   
   theme_minimal() +
-  theme(legend.position = "none", 
+  theme(legend.position = "none", strip.text.x.top = element_blank(),
         axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, 
                                    face = c("bold", "plain", "plain", "plain",
                                             "plain", "plain", "plain", "plain")))
 
+
+use.plt2 <- ggdraw(use.plt) +
+  draw_plot(use.plt) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
+             x = 0.4, y = 0.9, width = 0.1, height = 0.1) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
+             x = 0.9, y = 0.9, width = 0.1, height = 0.1)
+
 ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
        filename = "mam.aves.use.bar.v1.png",
-       use.plt, bg = "white",
+       use.plt2, bg = "white",
        device = "png", width = 20, height = 12, units = "cm")
 
 ## Simple mapping --------------------------------------------------------------
@@ -151,7 +161,8 @@ for (i in 1:length(uses.ls)) {
                          midpoint = sum(range.bird.i$sum)/2, "Species") +
     coord_sf(ylim = c(-55, 75)) +
     theme_void() +
-    theme(legend.position = "right", legend.title = element_blank())
+    theme(legend.position = "right", legend.title = element_blank(),
+          legend.key.width = unit(.25, 'cm'))
   
   map.mam.i <- ggplot() +
     geom_spatvector(data = world, fill = "grey90", colour = NA) +
@@ -160,10 +171,34 @@ for (i in 1:length(uses.ls)) {
                          midpoint = sum(range.mam.i$sum)/2, "Species") +
     coord_sf(ylim = c(-55, 75)) +
     theme_void() +
-    theme(legend.position = "right", legend.title = element_blank())
+    theme(legend.position = "right", legend.title = element_blank(),
+          legend.key.width = unit(.25, 'cm'))
+  
+  ## alt single colour scale
+  uni.map.bird.i <- ggplot() +
+    geom_spatvector(data = world, fill = "grey90", colour = NA) +
+    geom_spatraster(data = rast.bird.i, aes(fill = sum)) +
+    scale_fill_gradient(na.value = NA, high = "#3f007d", low = "#efedf5", 
+                        "Species") +
+    coord_sf(ylim = c(-55, 75)) +
+    theme_void() +
+    theme(legend.position = "right", legend.title = element_blank(),
+          legend.key.width = unit(.25, 'cm'))
+  
+  uni.map.mam.i <- ggplot() +
+    geom_spatvector(data = world, fill = "grey90", colour = NA) +
+    geom_spatraster(data = rast.mam.i, aes(fill = sum)) +
+    scale_fill_gradient(na.value = NA, high = "#662506", low = "#fff7bc",
+                         "Species") +
+    coord_sf(ylim = c(-55, 75)) +
+    theme_void() +
+    theme(legend.position = "right", legend.title = element_blank(),
+          legend.key.width = unit(.25, 'cm'))
   
   map.ls[[paste0(use.i, ".bird.plt")]] <- map.bird.i 
   map.ls[[paste0(use.i, ".mammal.plt")]] <- map.mam.i 
+  map.ls[[paste0(use.i, ".bird.uni.plt")]] <- uni.map.bird.i 
+  map.ls[[paste0(use.i, ".mammal.uni.plt")]] <- uni.map.mam.i 
 }
 
 
@@ -186,10 +221,22 @@ for (i in 1:length(uses.ls)) {
     theme_void() +
     theme(legend.title = element_blank(), legend.position = "none")
   
+  uni.hs.plt <- ggplot() +
+    geom_spatvector(data = world, fill = "grey90", colour = NA) +
+    geom_spatraster(data = hs.i, alpha = 1) +
+    scale_fill_manual(values = c("#d8b365", "#9e9ac8", "black"), 
+                      # mam, bird, joint
+                      na.value = NA, na.translate =FALSE ) +
+    coord_sf(ylim = c(-55, 75)) +
+    theme_void() +
+    theme(legend.title = element_blank(), legend.position = "none")
+  
   hs.plt.ls[[paste0(use.i)]] <- hs.plt 
+  hs.plt.ls[[paste0(use.i,".uni")]] <- uni.hs.plt 
   
 }
 
+## bivariate colours
 use.arr <-  ggarrange(map.ls$pets.13.bird.plt, map.ls$pets.13.mammal.plt, hs.plt.ls$pets.13 + theme(legend.position = "none"),
                      map.ls$food.hum.1.bird.plt,map.ls$food.hum.1.mammal.plt, hs.plt.ls$food.hum.1,
                      map.ls$sport.15.bird.plt,map.ls$sport.15.mammal.plt, hs.plt.ls$sport.15,
@@ -203,17 +250,44 @@ use.arr <-  ggarrange(map.ls$pets.13.bird.plt, map.ls$pets.13.mammal.plt, hs.plt
                                 "d - Ornamental", "", "",
                                 "e - Apparel", "", "",
                                 "f - Medicine", "", ""), hjust = 0)
-  hs.plt.ls$pets.13 + theme(legend.position = "none"),
-  hs.plt.ls$pets.13 + theme(legend.position = "none"),
-  hs.plt.ls$pets.13 + theme(legend.position = "none"),
-  hs.plt.ls$pets.13 + theme(legend.position = "none"),
-  hs.plt.ls$pets.13 + theme(legend.position = "none"),
-  hs.plt.ls$pets.13 + theme(legend.position = "none"))
+
+use.arr2 <- ggdraw(use.arr) +
+  draw_plot(use.arr) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
+             x = 0.33-0.08, y = 0.96, width = 0.05, height = 0.05) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
+             x = 0.66-0.08, y = 0.96, width = 0.05, height = 0.05)
 
 ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
        filename = "mam.aves.use.map.v2.png",
-       use.arr, bg = "white",
+       use.arr2, bg = "white",
        device = "png", width = 25, height = 25, units = "cm")
 
+## uni colours
+use.arr <-  ggarrange(map.ls$pets.13.bird.uni.plt, map.ls$pets.13.mammal.uni.plt, hs.plt.ls$pets.13.uni + theme(legend.position = "none"),
+                      map.ls$food.hum.1.bird.uni.plt,map.ls$food.hum.1.mammal.uni.plt, hs.plt.ls$food.hum.1.uni,
+                      map.ls$sport.15.bird.uni.plt,map.ls$sport.15.mammal.uni.plt, hs.plt.ls$sport.15.uni,
+                      map.ls$jewellery.12.bird.uni.plt,map.ls$jewellery.12.mammal.uni.plt, hs.plt.ls$jewellery.12.uni,
+                      map.ls$apparel.10.bird.uni.plt,map.ls$apparel.10.mammal.uni.plt, hs.plt.ls$apparel.10.uni,
+                      map.ls$med.3.bird.uni.plt,map.ls$med.3.mammal.uni.plt, hs.plt.ls$med.3.uni,
+                      ncol = 3, nrow = 6,
+                      labels = c("a - Pets", "", "",
+                                 "b - Food", "", "",
+                                 "c - Sport", "", "",
+                                 "d - Ornamental", "", "",
+                                 "e - Apparel", "", "",
+                                 "f - Medicine", "", ""), hjust = 0)
+
+use.arr2 <- ggdraw(use.arr) +
+  draw_plot(use.arr) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
+             x = 0.33-0.08, y = 0.96, width = 0.05, height = 0.05) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
+             x = 0.66-0.08, y = 0.96, width = 0.05, height = 0.05)
+
+ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
+       filename = "mam.aves.use.map.v2.unicol.png",
+       use.arr2, bg = "white",
+       device = "png", width = 25, height = 25, units = "cm")
 
 
