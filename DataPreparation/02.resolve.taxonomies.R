@@ -744,7 +744,8 @@ write.csv(cites.all.match, paste0(data.path,
 
 ## Resolve taxonomy - WiTIS ----------------------------------------------------
 WiTIS.clean <- WiTIS.species %>% filter(Class %in% c("Aves", "Mammalia"), Genus != "", Species!= "") %>%
-  mutate(Taxon = paste(Genus, Species))
+  mutate(Taxon = paste(Genus, Species),
+         Witis.Year = year(dmy_hm(Date.of.Incident)))
 write.csv(WiTIS.clean, paste0(data.path,
                               "Data/WiTIS/summary.species.clean.csv"))
 
@@ -772,11 +773,11 @@ upd.2 <-WiTIS.sp %>% left_join(aves.mam.iucn, by = c("Taxon" = "IUCN.name")) %>%
   select(Taxon, IUCN.name)
 
 ## 1571 Witis species entries
-## 13 are extinct, hybrids or domestic breeds
+## 13 are extinct, hybrids or domestic breeds (1558 now)
 WiTIS.IUCN.match <- rbind(names.corr, upd.1, upd.2) %>%
-  filter(!IUCN.name %in% c("EXTINCT", "DOMESTIC", "HYBRID"))
+  filter(!IUCN.name %in% c("EXTINCT", "DOMESTIC", "HYBRID")) %>% distinct()
 WiTIS.IUCN.match <- WiTIS.IUCN.match %>% left_join(select(WiTIS.clean, Taxon, Category.of.Incident,
-                                      Item...Commodity.Type, Worked.Product.Type))
+                                      Item...Commodity.Type, Worked.Product.Type, Witis.Year))
 write.csv(WiTIS.IUCN.match, paste0(data.path,
                                   "Data/WiTIS/IUCN.WiTIS.taxo.match.csv"))
 ## Resolve taxonomy - Tobias/AVONET data ---------------------------------------
