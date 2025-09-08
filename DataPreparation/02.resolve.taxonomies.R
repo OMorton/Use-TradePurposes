@@ -433,8 +433,8 @@ write.csv(iucn.wiki.mam.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.Ma
 
 spud.birds.short <- spud.birds %>% 
   filter(Type.of.use == "Extractive") %>%
-  select(Scientific.name, Purpose.s..of.end.use) %>% 
-  rename("Purpose" = "Purpose.s..of.end.use")
+  select(Scientific.name, Purpose.s..of.end.use, End.Year) %>% 
+  rename("Purpose" = "Purpose.s..of.end.use", "SpUD.year" = "End.Year")
 
 check <- spud.birds.short %>% left_join(iucn.taxo.short, by = c("Scientific.name" = "IUCN.name"))
 unique((check %>% filter(is.na(status)))$Scientific.name)
@@ -466,8 +466,8 @@ write.csv(spud.birds.match, paste0(data.path, "Data/SpUD/iucn.spud.taxo.match.cs
 
 spud.mam.short <- spud.mam %>% 
   filter(Type.of.use == "Extractive") %>%
-  select(Scientific.name, Purpose.s..of.end.use) %>% 
-  rename("Purpose" = "Purpose.s..of.end.use")
+  select(Scientific.name, Purpose.s..of.end.use, End.Year) %>% 
+  rename("Purpose" = "Purpose.s..of.end.use", "SpUD.year" = "End.Year")
 
 check <- spud.mam.short %>% left_join(iucn.mam.taxo.short, by = c("Scientific.name" = "IUCN.name"))
 unique((check %>% filter(is.na(status)))$Scientific.name)
@@ -499,7 +499,10 @@ write.csv(spud.mam.match, paste0(data.path, "Data/SpUD/iucn.spud.mam.taxo.match.
 
 ## Resolve taxonomy - Benítez-López et al., 2017--------------------------------
 BL.short <- BL.species %>% 
-  select(Species, Study) %>%
+  mutate(Reference = str_replace_all(Reference, "[^[:print:]]", ""),
+         BL.year = str_extract(Reference, "\\d{4}"),
+         BL.year = as.integer(BL.year)) %>%
+  select(Species, Study, BL.year) %>%
   separate_longer_delim(Species, ", ") %>%
   separate_longer_delim(Species, " and ") %>%
   filter(!grepl("spp", Species))
@@ -583,7 +586,8 @@ write.csv(BL.short.upd, paste0(data.path,
 ## Resolve taxonomy - Morton et al., 2021 --------------------------------------
 
 Morton.filt <- Morton.species %>% filter(Class %in% c("Aves", "Mammalia"), Specieslevel == 1) %>%
-  select(Class, SpeciesL, TP) %>%
+  select(Class, SpeciesL, TP, Year) %>%
+  rename("Mort.year" = "Year") %>%
   distinct()
 
 Morton.corr <- Morton.filt %>% 
@@ -605,6 +609,7 @@ write.csv(Morton.corr, paste0(data.path,
 ## Resolve taxonomy - WILDMEAT -------------------------------------------------
 
 ## bird and mammal
+## Dates can't be added to this data as functionality doesnt include bulk downloads
 WM.filt <- WM.species %>% filter(Specieslevel == 1, Class %in% c("Aves", "Mammalia"))
 
 WM.corr <- WM.filt %>%
