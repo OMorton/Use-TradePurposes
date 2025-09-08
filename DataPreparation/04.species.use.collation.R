@@ -104,7 +104,7 @@ spud.df <- rbind(spud.MAM.df, spud.AVES.df)
 
 unique(spud.df$Purpose)
 ## 161 species
-spud.sp <- spud.df %>% group_by(IUCN.name) %>%
+spud.sp <- spud.df %>% group_by(IUCN.name, SpUD.year) %>%
   separate_longer_delim(Purpose, delim = ", ") %>%
   filter(!Purpose %in% c("Learning and education", "Damage mitigation (to reduce impacts on rural people",
                         "landscapes and activities)", "Conservation Management",
@@ -120,24 +120,40 @@ spud.sp <- spud.df %>% group_by(IUCN.name) %>%
          SpUD.UT.12 = grepl("Decorative and aesthetic", Purpose),
          SpUD.UT.13 = grepl("pet", Purpose),
          SpUD.UT.13 = grepl("Keeping/companionship/display", Purpose),
-         SpUD.UT.15 = grepl("Recreation", Purpose)
+         SpUD.UT.15 = grepl("Recreation", Purpose),
+         SpUD.UT.1.Year = ifelse(SpUD.UT.1 == TRUE, SpUD.year, NA),
+         SpUD.UT.3.Year = ifelse(SpUD.UT.3 == TRUE, SpUD.year, NA),
+         SpUD.UT.12.Year = ifelse(SpUD.UT.12 == TRUE, SpUD.year, NA),
+         SpUD.UT.13.Year = ifelse(SpUD.UT.13 == TRUE, SpUD.year, NA),
+         SpUD.UT.15.Year = ifelse(SpUD.UT.15 == TRUE, SpUD.year, NA)
          # Collection/display unclear from examples if linked to UT13 or 15
          # Ceremony, religious, and ritual expression cannot be clearly linked to an end use
-         # Poisining incidents likewise not linked to use - more persecution
+         # Poisoning incidents likewise not linked to use - more persecution
          # Offer for sale/Commercial trade likewise not linked to use
          # Amusement likewise not linked to use
          # Monetary likewise not linked to use
          # Scientific Research could be just movement of specimens for study tagging/ringing etc - not clearly a use
   ) %>%
-  mutate(used.per.SpUD = 1) %>%
-  select(-Purpose)
+  group_by(IUCN.name) %>%
+  summarise(SpUD.UT.1 = ifelse(any(SpUD.UT.1 == TRUE), TRUE, FALSE),
+            SpUD.UT.3 = ifelse(any(SpUD.UT.3 == TRUE), TRUE, FALSE),
+            SpUD.UT.12 = ifelse(any(SpUD.UT.12 == TRUE), TRUE, FALSE),
+            SpUD.UT.13 = ifelse(any(SpUD.UT.13 == TRUE), TRUE, FALSE),
+            SpUD.UT.15 = ifelse(any(SpUD.UT.15 == TRUE), TRUE, FALSE),
+            SpUD.UT.1.Year = ifelse(any(!is.na(SpUD.UT.1.Year)), max(SpUD.UT.1.Year, na.rm = T), NA),
+            SpUD.UT.3.Year = ifelse(any(!is.na(SpUD.UT.3.Year)), max(SpUD.UT.3.Year, na.rm = T), NA),
+            SpUD.UT.12.Year = ifelse(any(!is.na(SpUD.UT.12.Year)), max(SpUD.UT.12.Year, na.rm = T), NA),
+            SpUD.UT.13.Year = ifelse(any(!is.na(SpUD.UT.13.Year)), max(SpUD.UT.13.Year, na.rm = T), NA),
+            SpUD.UT.15.Year = ifelse(any(!is.na(SpUD.UT.15.Year)), max(SpUD.UT.15.Year, na.rm = T), NA)
+            ) %>%
+  mutate(used.per.SpUD = 1)
 
 ## Processing - 4. Benítez-López et al., 2017 Science --------------------------
 
 ## 315 sp
 BenLop.df <- read.csv(paste0(data.path, "Data/Benitez-Lopez_2017/IUCN.BL.taxo.match.csv"))
 BenLop.sp <- BenLop.df %>% group_by(IUCN.name) %>%
-  summarise(used.per.BenLop = 1,
+  summarise(used.per.BenLop = 1,BenLop.Year = max(BL.year),
          BenLop.UT.1 = 1)
 
 ## Processing - 5. Donald et al. 2024 Cons Bio ---------------------------------
@@ -161,15 +177,19 @@ Morton.df <- read.csv(paste0(data.path,"Data/Morton_et_al_2021/IUCN.Morton.taxo.
 
 # 120 sp
 Morton.sp <- Morton.df %>% 
-  group_by(IUCN.name) %>% mutate(use = 1) %>%
-  select(IUCN.name, TP, use) %>% distinct() %>%
-  pivot_wider(id_cols = IUCN.name, names_from = TP, values_from = use) %>%
-  rename("Mort.UT.1" = "Bushmeat", "used.per.Mort" = "Assorted", "Mort.UT.13" = "Pet") %>%
+  group_by(IUCN.name, TP) %>% 
+  filter(Mort.year == max(Mort.year)) %>% mutate(use = 1) %>%
+  select(IUCN.name, TP, use, Mort.year) %>% distinct() %>%
+  pivot_wider(id_cols = IUCN.name, names_from = TP, values_from = c(use, Mort.year)) %>%
+  rename("Mort.UT.1" = "use_Bushmeat", "used.per.Mort" = "use_Assorted", 
+         "Mort.UT.13" = "use_Pet",
+         "Mort.UT.1.Year" = "Mort.year_Bushmeat", "used.per.Mort.Year" = "Mort.year_Assorted", 
+         "Mort.UT.13.Year" = "Mort.year_Pet") %>%
   mutate(used.per.Mort = 1)
 
 ## Processing - 8. Marshal et al. LEMIS data -----------------------------------
 lemis.df <-  read.csv(paste0(data.path,"Data/LEMIS/IUCN.LEMIS.taxo.match.csv")) %>%
-  select(-X, -X.1)
+  select(-X)
 
 unique(lemis.df$purpose) 
 # remove E (educational), B (breeding in captivity),
@@ -198,7 +218,22 @@ lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S", 
          LEMIS.UT.11 = ifelse(description %in% c("KEY", "LPL", "PIV", "RUG") &
                                 purpose != "H", 1, 0),
          LEMIS.UT.1 = ifelse(description %in% c("CAL", "CAV", "LEG", "SOU") &
-                                purpose != "H", 1, 0))
+                                purpose != "H", 1, 0), 
+        #year
+        LEMIS.UT.15.Year = ifelse(purpose == "H"|description == "TRO", sYear, NA),
+        LEMIS.UT.14.Year = ifelse(purpose %in% c("M"), sYear, NA),
+        # LEMIS.UT.13 = ifelse(purpose %in% c("Z", "G", "Q") & description == "LIV", 1, 0),
+        LEMIS.UT.12.Year = ifelse(description %in% c("BOC", "CAR", "HOC", "IJW", "IVC", "JWL") & 
+                               purpose != "H", sYear, NA),
+        LEMIS.UT.10.Year = ifelse(description %in% c("GAR", "LPS", "SHO", "TRI") & 
+                               purpose != "H", sYear, NA),
+        LEMIS.UT.6.Year = ifelse(description == "MUS" & purpose != "H", sYear, NA),
+        LEMIS.UT.8.Year = ifelse(description == "FIB" & purpose != "H", sYear, NA),
+        LEMIS.UT.3.Year = ifelse(description == "MED" & purpose != "H", sYear, NA),
+        LEMIS.UT.11.Year = ifelse(description %in% c("KEY", "LPL", "PIV", "RUG") &
+                               purpose != "H", sYear, NA),
+        LEMIS.UT.1.Year = ifelse(description %in% c("CAL", "CAV", "LEG", "SOU") &
+                              purpose != "H", sYear, NA))
 
 # 3315 sp
 LEMIS.sp <- lemis.purp.long %>% group_by(IUCN.name) %>%
@@ -212,6 +247,16 @@ LEMIS.sp <- lemis.purp.long %>% group_by(IUCN.name) %>%
             LEMIS.UT.3 = ifelse(sum(LEMIS.UT.3)>=1, 1, 0),
             LEMIS.UT.11 = ifelse(sum(LEMIS.UT.11)>=1, 1, 0),
             LEMIS.UT.1 = ifelse(sum(LEMIS.UT.1)>=1, 1, 0),
+            # years 
+            LEMIS.UT.15.Year = ifelse(any(!is.na(LEMIS.UT.15.Year)), max(LEMIS.UT.15.Year, na.rm = T), NA),
+            LEMIS.UT.14.Year = ifelse(any(!is.na(LEMIS.UT.14.Year)), max(LEMIS.UT.14.Year, na.rm = T), NA),
+            LEMIS.UT.12.Year = ifelse(any(!is.na(LEMIS.UT.12.Year)), max(LEMIS.UT.12.Year, na.rm = T), NA),
+            LEMIS.UT.10.Year = ifelse(any(!is.na(LEMIS.UT.10.Year)), max(LEMIS.UT.10.Year, na.rm = T), NA),
+            LEMIS.UT.6.Year = ifelse(any(!is.na(LEMIS.UT.6.Year)), max(LEMIS.UT.6.Year, na.rm = T), NA),
+            LEMIS.UT.8.Year = ifelse(any(!is.na(LEMIS.UT.8.Year)), max(LEMIS.UT.8.Year, na.rm = T), NA),
+            LEMIS.UT.3.Year = ifelse(any(!is.na(LEMIS.UT.3.Year)), max(LEMIS.UT.3.Year, na.rm = T), NA),
+            LEMIS.UT.11.Year = ifelse(any(!is.na(LEMIS.UT.11.Year)), max(LEMIS.UT.11.Year, na.rm = T), NA),
+            LEMIS.UT.1.Year = ifelse(any(!is.na(LEMIS.UT.1.Year)), max(LEMIS.UT.1.Year, na.rm = T), NA),
             used.per.LEMIS = 1)
 
 ## Processing - 9. CITES v2025.1 Updated CITES database ------------------------
@@ -223,14 +268,16 @@ unique(CITES.df$Purpose)
 # N reintroduction, S scientific
 # orignally considered these Zoos (Z)/botanic gardens (G)/circuses (Q) (if live fall under pets/display)
 # to be display trade but in reflection this is difficult to be certain off so is now removed.
-# KEEP - H (hunting trophy), P (personal), 
+# KEEP - H (hunting trophy), P (personal), NA,
 # T (commerical),  M (medical inc biomedical research cannot be clearly 
 # split between medicinal and research)
 # meat is unclear - likely for humans (but could be for animal feed or medicinal use)
 sort(unique(CITES.df$Term))
+length(unique(CITES.purp.long$Taxon))
 
 CITES.purp.long <- CITES.df %>% 
   filter(!Purpose %in% c("B", "E", "L", "N", "S", "Z", "G", "Q")) %>%
+  group_by(IUCN.name) %>%
   mutate(CITES.UT.15 = ifelse(Purpose == "H"|Term == "trophies", 1, 0),
          #CITES.UT.13 = ifelse(Purpose %in% c("Z", "G", "Q") & Term == "live", 1, 0),
          CITES.UT.12 = ifelse(Term %in% c("bone carvings", "carvings", "horn carvings", "ivory carvings") & 
@@ -243,7 +290,21 @@ CITES.purp.long <- CITES.df %>%
          CITES.UT.1 = ifelse(Term %in% c("soup") & 
                                Purpose != "H", 1, 0),
          CITES.UT.3 = ifelse(Term == "medicine", 1, 0),
-         CITES.UT.6 = ifelse(Term == "musk", 1, 0))
+         CITES.UT.6 = ifelse(Term == "musk", 1, 0),
+         # year 
+         CITES.UT.15.Year = ifelse(Purpose == "H"|Term == "trophies", Year, NA),
+         #CITES.UT.13.Year = ifelse(Purpose %in% c("Z", "G", "Q") & Term == "live", 1, 0),
+         CITES.UT.12.Year = ifelse(Term %in% c("bone carvings", "carvings", "horn carvings", "ivory carvings") & 
+                                Purpose != "H", Year, NA),
+         CITES.UT.8.Year = ifelse(Term == "fibres", Year, NA),
+         CITES.UT.11.Year = ifelse(Term %in% c("furniture", "leather products (large)", "sets of piano keys") &
+                                Purpose != "H", Year, NA),
+         CITES.UT.10.Year = ifelse(Term %in% c("garments", "leather products (small)", "shoes") & 
+                                Purpose != "H", Year, NA),
+         CITES.UT.1.Year = ifelse(Term %in% c("soup") & 
+                               Purpose != "H", Year, NA),
+         CITES.UT.3.Year = ifelse(Term == "medicine", Year, NA),
+         CITES.UT.6.Year = ifelse(Term == "musk", Year, NA))
 
 # 1699 sp
 CITES.sp <- CITES.purp.long %>% group_by(IUCN.name) %>%
@@ -256,6 +317,15 @@ CITES.sp <- CITES.purp.long %>% group_by(IUCN.name) %>%
             CITES.UT.1 = ifelse(sum(CITES.UT.1, na.rm = T)>=1, 1, 0),
             CITES.UT.3 = ifelse(sum(CITES.UT.3, na.rm = T)>=1, 1, 0),
             CITES.UT.6 = ifelse(sum(CITES.UT.6, na.rm = T)>=1, 1, 0),
+            # year
+            CITES.UT.15.Year = ifelse(any(!is.na(CITES.UT.15.Year)), max(CITES.UT.15.Year, na.rm = T), NA),
+            CITES.UT.12.Year = ifelse(any(!is.na(CITES.UT.12.Year)), max(CITES.UT.12.Year, na.rm = T), NA),
+            CITES.UT.8.Year = ifelse(any(!is.na(CITES.UT.8.Year)), max(CITES.UT.8.Year, na.rm = T), NA),
+            CITES.UT.11.Year = ifelse(any(!is.na(CITES.UT.11.Year)), max(CITES.UT.11.Year, na.rm = T), NA),
+            CITES.UT.10.Year = ifelse(any(!is.na(CITES.UT.10.Year)), max(CITES.UT.10.Year, na.rm = T), NA),
+            CITES.UT.1.Year = ifelse(any(!is.na(CITES.UT.1.Year)), max(CITES.UT.1.Year, na.rm = T), NA),
+            CITES.UT.3.Year = ifelse(any(!is.na(CITES.UT.3.Year)), max(CITES.UT.3.Year, na.rm = T), NA),
+            CITES.UT.6.Year = ifelse(any(!is.na(CITES.UT.6.Year)), max(CITES.UT.6.Year, na.rm = T), NA),
             used.per.CITES = 1)
 
 ## Processing - 10. WiTIS TRAFFIC Database -------------------------------------
@@ -281,7 +351,14 @@ WiTIS.purp.long <- WiTIS.df %>%
          # WiTIS specific - all examples refer to tiger bone wine (medicinal use)
          WiTIS.UT.3 = ifelse(Item...Commodity.Type == "Wine", 1, 0),
          WiTIS.UT.1 = ifelse(Item...Commodity.Type == "Meat", 1, 0),
-         WiTIS.UT.6 = ifelse(Item...Commodity.Type == "Musk", 1, 0))
+         WiTIS.UT.6 = ifelse(Item...Commodity.Type == "Musk", 1, 0),
+         # year
+         WiTIS.UT.12.Year = ifelse(Item...Commodity.Type %in% c("Bone - Worked", "Ivory - Worked",
+                                                           "Carvings", "Horn - Worked"), Witis.Year, NA),
+         # WiTIS specific - all examples refer to tiger bone wine (medicinal use)
+         WiTIS.UT.3.Year = ifelse(Item...Commodity.Type == "Wine", Witis.Year, NA),
+         WiTIS.UT.1.Year = ifelse(Item...Commodity.Type == "Meat", Witis.Year, NA),
+         WiTIS.UT.6.Year = ifelse(Item...Commodity.Type == "Musk", Witis.Year, NA))
 
 # 1519 sp
 WiTIS.sp <- WiTIS.purp.long %>% group_by(IUCN.name) %>%
@@ -289,14 +366,29 @@ WiTIS.sp <- WiTIS.purp.long %>% group_by(IUCN.name) %>%
             WiTIS.UT.3 = ifelse(sum(WiTIS.UT.3, na.rm = T)>=1, 1, 0),
             WiTIS.UT.1 = ifelse(sum(WiTIS.UT.1, na.rm = T)>=1, 1, 0),
             WiTIS.UT.6 = ifelse(sum(WiTIS.UT.6, na.rm = T)>=1, 1, 0),
+            # year
+            WiTIS.UT.12.Year = ifelse(any(!is.na(WiTIS.UT.12.Year)), max(WiTIS.UT.12.Year, na.rm = T), NA),
+            WiTIS.UT.3.Year = ifelse(any(!is.na(WiTIS.UT.3.Year)), max(WiTIS.UT.3.Year, na.rm = T), NA),
+            WiTIS.UT.1.Year = ifelse(any(!is.na(WiTIS.UT.1.Year)), max(WiTIS.UT.1.Year, na.rm = T), NA),
+            WiTIS.UT.6.Year = ifelse(any(!is.na(WiTIS.UT.6.Year)), max(WiTIS.UT.6.Year, na.rm = T), NA),
             used.per.WiTIS = 1)  
 
 ## Collate full use database ---------------------------------------------------
-## taxo for 11,195 sp (11,031 extant)
+
 iucn.taxo.AVES <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv")) %>%
   select(IUCN.name, common.name, familyName, orderName, status) %>% mutate(class = "Aves")
 iucn.taxo.MAM <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Jul25.csv"))%>%
   select(IUCN.name, common.name, familyName, orderName, status) %>% mutate(class = "Mammalia")
+
+## assessment years
+aves.assess <- read.csv(paste0(data.path, "Data/IUCN/aves.assess.metadata.csv")) %>%
+  rename("IUCN.name" = "taxon_scientific_name", "IUCN.Assess.Year" = "year_published") %>% 
+  select(IUCN.name, IUCN.Assess.Year)
+mam.assess <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.csv")) %>%
+  rename("IUCN.name" = "taxon_scientific_name", "IUCN.Assess.Year" = "year_published") %>% 
+  select(IUCN.name, IUCN.Assess.Year)
+
+assess.meta <- rbind(mam.assess, aves.assess)
 
 # 17,220 species total, 16,971 extant species
 iucn.taxo <- rbind(iucn.taxo.MAM, iucn.taxo.AVES) %>% filter(status != "EX")
@@ -304,6 +396,7 @@ iucn.taxo <- rbind(iucn.taxo.MAM, iucn.taxo.AVES) %>% filter(status != "EX")
 use.raw <- iucn.taxo %>%
   left_join(IUCN.use.sp) %>%
   left_join(IUCN.thr.sp) %>%
+  left_join(assess.meta) %>%
   left_join(spud.sp) %>%
   left_join(BenLop.sp) %>%
   left_join(Don.sp)%>%
@@ -334,7 +427,7 @@ use.raw <- use.raw %>%
          IUCN.UT.17.sim = ifelse(is.na(IUCN.UT.17), 0, 1),
          IUCN.UT.18.sim = ifelse(is.na(IUCN.UT.18), 0, 1),
          across(7:24, ~ replace_na(.x, "0")), # IUCN text based columns
-         across(25:82, ~ replace_na(.x, 0)), # all other columns inc new iucn numeric duplicates
+         across(25:95, ~ replace_na(.x, 0)), # all other columns inc new iucn numeric duplicates
     use = used.per.UT + used.per.BRU + used.per.SpUD + used.per.BenLop + 
       used.per.Don + used.per.WM + used.per.Mort + 
       used.per.CITES + used.per.LEMIS + used.per.WiTIS,
@@ -356,9 +449,9 @@ use.raw <- use.raw %>%
                          CITES.UT.1 == 1|CITES.UT.3 == 1|CITES.UT.6 == 1|
                          WiTIS.UT.12 == 1|WiTIS.UT.3 == 1|WiTIS.UT.6 == 1,
                          1, 0))
-sum(use.raw$use) # 7918 (08/08/25)
-sum(use.raw$any.purpose) # 6732 (12/08/25)
-use.raw %>% group_by(class) %>% summarise(sum(use)) # 5908 birds, 2010 mammals
+sum(use.raw$use) # 7941 (08/09/25)
+sum(use.raw$any.purpose) # 6723 (08/09/25) 
+use.raw %>% group_by(class) %>% summarise(sum(use)) # 5923 birds, 2018 mammals
 
 ## Processing - additional Wikipedia filter ------------------------------------
 
@@ -470,9 +563,9 @@ use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
                                 MAN.Wiki.UT.3 == 1 |MAN.Wiki.UT.10 == 1, 1, 0))
   
 
-sum(use.raw.wiki$use) # (12/08/25) 8759
-sum(use.raw.wiki$any.purpose) # (12/08/25) 6807
-use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6344, 2415
+sum(use.raw.wiki$use) # (08/09/25) 8775
+sum(use.raw.wiki$any.purpose) # (08/09/25) 6809
+use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6355, 2420
 write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.csv"))
 
 
