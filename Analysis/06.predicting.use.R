@@ -113,12 +113,8 @@ i <- "food.hum.1"
 for (i in use.ls) {
   cat(i, "\n")
   
-  train.index <- createDataPartition(known.use.full.clean[[i]], p = 0.75, list = FALSE)
-  
-  df.train <- known.use.full.clean[train.index, ]
-  df.test <- known.use.full.clean[-train.index, ] 
-  
-  df.train.clean <- df.train %>% select(all_of(i), 
+
+  known.use.full.clean2 <- known.use.full.clean %>% select(all_of(i), 
                                    # beak
                                    Beak.Length_Culmen, Beak.Length_Nares, Beak.Width,
                                    Beak.Depth, 
@@ -145,13 +141,18 @@ for (i in use.ls) {
     mutate(Order = 1) %>%
     pivot_wider(names_from = orderName, values_from = Order, values_fill = 0) %>%
     # drop orders with less than 20 species (12 orders to drop)
-    select(-LEPTOSOMIFORMES, -OPISTHOCOMIFORMES, -CARIAMIFORMES, -EURYPYGIFORMES,
-           -GAVIIFORMES, -MESITORNITHIFORMES, -PHAETHONTIFORMES, -COLIIFORMES,
-           -PHOENICOPTERIFORMES, -CATHARTIFORMES, -PODICIPEDIFORMES, -PTEROCLIFORMES) %>%
+    select(-any_of(c("LEPTOSOMIFORMES", "OPISTHOCOMIFORMES", "CARIAMIFORMES", "EURYPYGIFORMES",
+           "GAVIIFORMES", "MESITORNITHIFORMES", "PHAETHONTIFORMES", "COLIIFORMES",
+           "PHOENICOPTERIFORMES", "CATHARTIFORMES", "PODICIPEDIFORMES", "PTEROCLIFORMES"))) %>%
     # remove highly corr variables
     select(-Min.Latitude, -Max.Latitude, -GenLength, 
                       -Beak.Length_Nares, -Beak.Width, -Wing.Length, -trav.t.5,
                       -Maximum.longevity)
+  
+  train.index <- createDataPartition(known.use.full.clean2[[i]], p = 0.75, list = FALSE)
+  
+  df.train <- known.use.full.clean2[train.index, ]
+  df.test <- known.use.full.clean2[-train.index, ] 
 
   ## Tune and optimize model per use
   rf.all.i <- data.frame()
@@ -162,10 +163,11 @@ for (i in use.ls) {
       
       fit <- train(
         formula(paste(i, "~ .")),
-        data = df.train.clean, method = "ranger",
+        data = df.train, method = "ranger",
         trControl = trainControl(
           method = "cv", number = 5,
           verboseIter = T, classProbs = TRUE,
+          # custom verbose summary
           summaryFunction = mySummary), 
         tuneGrid = expand.grid(mtry = c(1, 3,5, 10, 15, 20, 30, 40),
                                min.node.size = 5, splitrule = c("gini", "extratrees")),
@@ -176,7 +178,7 @@ for (i in use.ls) {
         mutate(ntree = ntree, .before = mtry, use = i)
       rf.all.i <- rbind(rf.all.i, results)
     }
-  pred.out.ls[[paste0("train.", i)]] <- df.train.clean 
+  pred.out.ls[[paste0("train.", i)]] <- df.train 
   pred.out.ls[[paste0("test", i)]] <- df.test  
   pred.out.ls[[paste0("mod.results.", i)]] <- rf.all.i  
   write.csv(rf.all.i, paste0(data.path, "Outputs/RF/tuning/", i, "tuning.grid.csv"))
@@ -227,11 +229,11 @@ for (i in use.ls) {
     preds <- rf.pred.i %>% summarise(preds = as.factor(ifelse(yes >= t, "yes", "no")))
     mean(preds$preds == train.i[[i]])
   })
-  best_thresh <- thresholds[which.max(accs)]
+  best.thresh <- thresholds[which.max(accs)]
   
   # using optimum threshold to predict for test data
   rf.pred.i <- predict(fit.i, test.i, type = "prob") %>% 
-    summarise(pred =as.factor(ifelse(yes >= best_thresh, "yes", "no")))
+    summarise(pred =as.factor(ifelse(yes >= best.thresh, "yes", "no")))
   # Generate final fit statistics
   opt.matrix <- confusionMatrix(rf.pred.i$pred, as.factor(test.i[[i]]))
 
@@ -245,5 +247,7 @@ for (i in use.ls) {
   stats.out.ls[[paste0("final.mod.",i)]] <- fit.i
   stats.out.ls[[paste0("optimized.matrix.",i)]] <- opt.matrix
   stats.out.ls[[paste0("default.matrix.",i)]] <- def.matrix
+  stats.out.ls[[paste0("opt.threshold.",i)]] <- best.thresh
+  
 }
   
