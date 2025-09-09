@@ -6,6 +6,7 @@ library(tidyterra)
 library(ggpubr)
 library(png)
 library(grid)
+library(cowplot)
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
