@@ -19,12 +19,14 @@ for (i in 1:18) {
 ## Get use, threat and distribution data for all BIRDS -------------------------
 aves.assessments <- rl_class(class = "Aves", latest = TRUE, key = API.key)
 
-## 11195 global assessments
+## 11195 (Jun25), 11185 (Oct25) global assessments
+## 1 new species gained, 11 lumped with existing sp
 aves.assess <- aves.assessments$assessments %>% as.data.frame() %>%
   mutate(scopes = as.character(scopes)) %>%
   filter(scopes == "list(description = list(en = \"Global\"), code = \"1\")" )
 
-write.csv(aves.assess, paste0(data.path, "Data/IUCN/aves.assess.metadata.csv"))
+write.csv(aves.assess, paste0(data.path, "Data/IUCN/aves.assess.metadata.Oct25.csv"))
+aves.assess <- read.csv(paste0(data.path, "Data/IUCN/aves.assess.metadata.Oct25.csv"))
 
 order.txt <- data.frame()
 order.taxo <- data.frame()
@@ -38,7 +40,7 @@ order.realms <- data.frame()
 for (k in 1:nrow(aves.assess)){
   
   cat(k, "\n")
-  Sys.sleep(0.5)
+  Sys.sleep(1.0)
   sp.k <- aves.assess[k,]
   
   assmt.k <- rl_assessment(sp.k$assessment_id, key = API.key)
@@ -119,23 +121,23 @@ for (k in 1:nrow(aves.assess)){
   
 }
 
-write.csv(order.taxo, paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv"))
-write.csv(order.threat, paste0(data.path, "Data/IUCN/raw.iucn.threat.Jun25.csv"))
-write.csv(order.use, paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv"))
-write.csv(order.location, paste0(data.path, "Data/IUCN/raw.iucn.location.Jun25.csv"))
-write.csv(order.habs, paste0(data.path, "Data/IUCN/raw.iucn.habitats.Jun25.csv"))
-write.csv(order.realms, paste0(data.path, "Data/IUCN/raw.iucn.realms.Jun25.csv"))
-write.csv(order.txt, paste0(data.path, "Data/IUCN/raw.iucn.verbose.txt.Jun25.csv"))
+write.csv(order.taxo, paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Oct25.csv"))
+write.csv(order.threat, paste0(data.path, "Data/IUCN/raw.iucn.threat.Oct25.csv"))
+write.csv(order.use, paste0(data.path, "Data/IUCN/raw.iucn.use.Oct25.csv"))
+write.csv(order.location, paste0(data.path, "Data/IUCN/raw.iucn.location.Oct25.csv"))
+write.csv(order.habs, paste0(data.path, "Data/IUCN/raw.iucn.habitats.Oct25.csv"))
+write.csv(order.realms, paste0(data.path, "Data/IUCN/raw.iucn.realms.Oct25.csv"))
+write.csv(order.txt, paste0(data.path, "Data/IUCN/raw.iucn.verbose.txt.Oct25.csv"))
 
 ## Get use, threat and distribution data for all MAMMALS -----------------------
 mam.assessments <- rl_class(class = "Mammalia", latest = TRUE, key = API.key)
 
-## 6025 global assessments
+## 6025 (Jun25) 6036 (Oct25) global assessments
 mam.assess <- mam.assessments$assessments %>% as.data.frame() %>%
   mutate(scopes = as.character(scopes)) %>%
   filter(grepl("Global", scopes))
 
-write.csv(mam.assess, paste0(data.path, "Data/IUCN/mam.assess.metadata.csv"))
+write.csv(mam.assess, paste0(data.path, "Data/IUCN/mam.assess.metadata.Oct25.csv"))
 
 order.txt <- data.frame()
 order.taxo <- data.frame()
@@ -149,7 +151,7 @@ k <- 4
 for (k in 1:nrow(mam.assess)){
   
   cat(k, "\n")
-  Sys.sleep(0.5)
+  Sys.sleep(1.0)
   sp.k <- mam.assess[k,]
   
   assmt.k <- rl_assessment(sp.k$assessment_id, key = API.key)
@@ -234,24 +236,24 @@ for (k in 1:nrow(mam.assess)){
   
 }
 
-write.csv(order.taxo, paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Jul25.csv"))
-write.csv(order.threat, paste0(data.path, "Data/IUCN/raw.iucn.threat.MAMMALIA.Jul25.csv"))
-write.csv(order.use, paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Jul25.csv"))
-write.csv(order.location, paste0(data.path, "Data/IUCN/raw.iucn.location.MAMMALIA.Jul25.csv"))
-write.csv(order.habs, paste0(data.path, "Data/IUCN/raw.iucn.habitats.MAMMALIA.Jul25.csv"))
-write.csv(order.realms, paste0(data.path, "Data/IUCN/raw.iucn.realms.MAMMALIA.Jul25.csv"))
-write.csv(order.txt, paste0(data.path, "Data/IUCN/raw.iucn.verbose.txt.MAMMALIA.Jul25.csv"))
+write.csv(order.taxo, paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Oct25.csv"))
+write.csv(order.threat, paste0(data.path, "Data/IUCN/raw.iucn.threat.MAMMALIA.Oct25.csv"))
+write.csv(order.use, paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Oct25.csv"))
+write.csv(order.location, paste0(data.path, "Data/IUCN/raw.iucn.location.MAMMALIA.Oct25.csv"))
+write.csv(order.habs, paste0(data.path, "Data/IUCN/raw.iucn.habitats.MAMMALIA.Oct25.csv"))
+write.csv(order.realms, paste0(data.path, "Data/IUCN/raw.iucn.realms.MAMMALIA.Oct25.csv"))
+write.csv(order.txt, paste0(data.path, "Data/IUCN/raw.iucn.verbose.txt.MAMMALIA.Oct25.csv"))
 
 ## Get synonyms ----------------------------
 
-aves.assess <- read.csv(paste0(data.path, "Data/IUCN/aves.assess.metadata.csv"))
+aves.assess <- read.csv(paste0(data.path, "Data/IUCN/aves.assess.metadata.Oct25.csv"))
 
 k <- 1
 syn.df <- data.frame()
 for (k in 1:nrow(aves.assess)){
   
   cat(k, "\n")
-  Sys.sleep(0.5)
+  Sys.sleep(1.0)
   sp.k <- aves.assess[k,]
   
   assmt.k <- rl_assessment(sp.k$assessment_id, key = API.key)
@@ -265,17 +267,16 @@ for (k in 1:nrow(aves.assess)){
   }
   syn.df <- rbind(syn.df, syn)
 }
-write.csv(syn.df, paste0(data.path, "Data/IUCN/raw.iucn.synonyms.Jun25.csv"))
+write.csv(syn.df, paste0(data.path, "Data/IUCN/raw.iucn.synonyms.Oct25.csv"))
 
 ## mammals
-mam.assess <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.csv"))
-
+mam.assess <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.Oct25.csv"))
 k <- 1
 syn.df <- data.frame()
 for (k in 1:nrow(mam.assess)){
   
   cat(k, "\n")
-  Sys.sleep(0.5)
+  Sys.sleep(1.0)
   sp.k <- mam.assess[k,]
   
   assmt.k <- rl_assessment(sp.k$assessment_id, key = API.key)
@@ -289,4 +290,4 @@ for (k in 1:nrow(mam.assess)){
   }
   syn.df <- rbind(syn.df, syn)
 }
-write.csv(syn.df, paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Jun25.csv"))
+write.csv(syn.df, paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Oct25.csv"))
