@@ -377,12 +377,14 @@ wiki.binom <- iucn.taxo.short %>%
   left_join(wiki.species, by = c("IUCN.name" = "taxonName")) %>%
   rename("common.name" = "common.name.x")
 wiki.binom.match <- wiki.binom %>% filter(!is.na(wikipediaURL)) 
+length(unique(wiki.binom.match$IUCN.name)) # 10,232
 
 ## common name match
 wiki.common <- wiki.binom %>% filter(is.na(wikipediaURL)) %>% 
   select(IUCN.name, common.name, status) %>%
   left_join(wiki.species, by = c("common.name"))
 wiki.common.match <- wiki.common %>% filter(!is.na(wikipediaURL))
+length(unique(wiki.common.match$IUCN.name)) # 413
 
 ## manual final step
 wiki.common %>% filter(is.na(wikipediaURL)) %>% 
@@ -392,11 +394,13 @@ wiki.common %>% filter(is.na(wikipediaURL)) %>%
 wiki.manual <- read.csv(paste0(data.path, "Data/Wikipedia/missing.links.corrected.csv")) %>%
   mutate(wikipediaURL = ifelse(wikipediaURL == "", NA, wikipediaURL))
 wiki.manual %>% filter(is.na(wikipediaURL)) # 48 could not be clearly linked to pages
+length(unique(wiki.manual$IUCN.name)) # 378
 
 iucn.wiki.tax <- rbind(
   select(wiki.binom.match, IUCN.name, common.name, status, wikipediaURL),
   select(wiki.common.match, IUCN.name, common.name, status, wikipediaURL),
-  select(wiki.manual, IUCN.name, common.name, status, wikipediaURL))
+  select(wiki.manual, IUCN.name, common.name, status, wikipediaURL)) %>%
+  filter(IUCN.name %in% iucn.taxo.short$IUCN.name)
 
 length(unique(iucn.wiki.tax$IUCN.name)) # 11021
 iucn.wiki.tax %>% filter(is.na(wikipediaURL)) # 48
@@ -405,17 +409,19 @@ write.csv(iucn.wiki.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.m
 
 ## Resolve taxonomy - Wikipedia - MAMMALS --------------------------------------
 
-## Binom match
+## Binom match (5946)
 wiki.binom.mam <- iucn.mam.taxo.short %>%
   left_join(wiki.mammals, by = c("IUCN.name" = "taxonName")) %>%
   rename("common.name" = "common.name.x")
 wiki.binom.mam.match <- wiki.binom.mam %>% filter(!is.na(wikipediaURL)) 
+length(unique(wiki.binom.mam.match$IUCN.name)) # 5522
 
 ## common name match
 wiki.mam.common <- wiki.binom.mam %>% filter(is.na(wikipediaURL)) %>% 
   select(IUCN.name, common.name, status) %>%
   left_join(wiki.mammals, by = c("common.name"))
 wiki.mam.common.match <- wiki.mam.common %>% filter(!is.na(wikipediaURL))
+length(unique(wiki.mam.common.match$IUCN.name)) # 181
 
 ## manual final step
 wiki.mam.common %>% filter(is.na(wikipediaURL)) %>% 
@@ -424,15 +430,16 @@ wiki.mam.common %>% filter(is.na(wikipediaURL)) %>%
 ## read in corrected links
 wiki.mam.manual <- read.csv(paste0(data.path, "Data/Wikipedia/missing.mam.links.corrected.csv")) %>%
   mutate(wikipediaURL = ifelse(wikipediaURL == "", NA, wikipediaURL))
-wiki.mam.manual %>% filter(is.na(wikipediaURL)) # 73 could not be clearly linked to pages
+wiki.mam.manual %>% filter(is.na(wikipediaURL)) # 90 could not be clearly linked to pages
+length(unique(wiki.mam.manual$IUCN.name)) # 243
 
 iucn.wiki.mam.tax <- rbind(
   select(wiki.binom.mam.match, IUCN.name, common.name, status, wikipediaURL),
   select(wiki.mam.common.match, IUCN.name, common.name, status, wikipediaURL),
   select(wiki.mam.manual, IUCN.name, common.name, status, wikipediaURL))
 
-length(unique(iucn.wiki.mam.tax$IUCN.name)) # 5907
-iucn.wiki.mam.tax %>% filter(is.na(wikipediaURL)) # 73
+length(unique(iucn.wiki.mam.tax$IUCN.name)) # 5946
+iucn.wiki.mam.tax %>% filter(is.na(wikipediaURL)) # 90
 
 write.csv(iucn.wiki.mam.tax, paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.Mammals.taxo.match.csv"))
 
@@ -662,8 +669,8 @@ write.csv(WM.corr, paste0(data.path,
 
 ## Resolve taxonomy - Marshall/New LEMIS ---------------------------------------
 
-mam.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Jun25.csv")) %>% filter(!is.na(syn.name))
-aves.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.Jun25.csv")) %>% filter(!is.na(syn.name))
+mam.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Oct25.csv")) %>% filter(!is.na(syn.name))
+aves.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.Oct25.csv")) %>% filter(!is.na(syn.name))
 
 all.syns <- rbind(aves.syns, mam.syns)
 ## 7376 lemis sp
@@ -933,79 +940,59 @@ cc.crosswalk <- cc.crosswalk %>%
   mutate(mctav_birdlife_v8 = gsub("_", " ", mctav_birdlife_v8),
          match = 1)
 
-## 11031
+## 11021
 f <- iucn.taxo.short %>% left_join(cc.crosswalk, by = c("IUCN.name" = "mctav_birdlife_v8")) %>%
   mutate(BL.v8 = ifelse(match == 1, IUCN.name, NA))
 
 write.csv(f , paste0(data.path,
                      "Data/CC.taxonomy.crosswalk/CC.taxonomydata.out.csv"))
 
-cc.in <- read.csv(paste0(data.path, "Data/CC.taxonomy.crosswalk/CC.taxonomydata.in.csv")) %>%
+## 11021
+cc.in <- f %>%
   mutate(sant_ebird2021 = gsub("_", " ", sant_ebird2021)) %>% 
   select(IUCN.name, common.name, BL.v8) %>% distinct()
 
 ## 11464
-cc.all<-  cc.in %>% left_join(cc.crosswalk, by = c("BL.v8" = "mctav_birdlife_v8"))
-s1 <- cc.all %>% group_by(common.name) %>% filter(n()>1)
+cc.all<-  cc.in %>% 
+  left_join(filter(cc.crosswalk, !is.na(mctav_birdlife_v8)), by = c("BL.v8" = "mctav_birdlife_v8"))
 
+first.match <- cc.all %>% select(IUCN.name, sant_ebird2021) %>% distinct()
+length(unique(first.match$IUCN.name)) ## 11021
 
-f <- cc.all %>% select(IUCN.name, sant_ebird2021) %>% distinct()
-s2 <- f %>% group_by(IUCN.name) %>% filter(n()>1)
+s2 <- first.match %>% group_by(IUCN.name) %>% filter(n()>1) %>% ungroup() %>% filter(!is.na(sant_ebird2021)) 
+length(unique(s2$IUCN.name)) #192
 nominate.sp <- s2 %>% mutate(sant_ebird2021 = gsub("_", " ", sant_ebird2021)) %>%
-  filter(IUCN.name == sant_ebird2021)
+  filter(IUCN.name == sant_ebird2021) # 183
+
 
 dupl.sp <- s2 %>% filter(!IUCN.name %in% nominate.sp$IUCN.name) %>%
   filter(sant_ebird2021 %in% c("Megascops_guatemalae", "Thamnistes_anabatinus",
                                "Herpsilochmus_rufimarginatus", "Todiramphus_gertrudae",
                                "Hirundo_tahitica", "Ceyx_malaitae", "Phylloscopus_makirensis",
-                               "Edolisoma_tenuirostre", "Chenorhamphus_campbelli"))
+                               "Edolisoma_tenuirostre", "Chenorhamphus_campbelli")) #9
 
-## 11031 sp matched up to ebird 2021
-iucn.ebird.sant <- rbind(f %>% group_by(IUCN.name) %>% filter(n()==1), nominate.sp, dupl.sp)
+first.match %>% group_by(IUCN.name) %>% filter(n()==1)
+## 11021 sp matched up to ebird 2021
+iucn.ebird.sant <- rbind(first.match%>% group_by(IUCN.name) %>% filter(n()==1), 
+                         nominate.sp, dupl.sp) %>%
+  mutate(sant_ebird2021 = gsub("_", " ", sant_ebird2021))
 
-length(unique(s2$IUCN.name))
-
-cc.in %>% group_by(BL.v8) %>% filter(n()>1)
-s <- cc.in %>% group_by(common.name) %>% filter(n()>1)
-
-f <- cc.in %>% group_by(sant_ebird2021) %>% filter(n()>1)
-
-cc.in %>% left_join(cc.crosswalk, by = c("BL.v8" = "mctav_birdlife_v8")) 
+length(unique(iucn.ebird.sant$sant_ebird2021)) #10,128
 
 sant.short <- santageli.df %>% select(sciName_ebird2021) %>% mutate(match = 1) %>%
-  distinct()
+  distinct() %>% filter(!is.na(sciName_ebird2021))
 
-match2 <- cc.in %>% left_join(sant.short, by = c("sant_ebird2021" = "sciName_ebird2021"))
+sant.to.BL <- sant.short %>% left_join(iucn.ebird.sant, by = c("sciName_ebird2021" = "sant_ebird2021"))
+sant.to.BL %>% filter(is.na(IUCN.name)) #219 that are multiple eBird sp. collapsing to 1 BL (nominate taken previously)
 
-# Does give HBW/BL taxonomy but only v5 now on v9.1
-santageli.df %>% select(sciName_HBWBLv5) %>% filter(!is.na(sciName_HBWBLv5)) %>% 
-  distinct() %>% mutate(pres = 1) # ~9400 species
+BL.to.Sant <- iucn.ebird.sant %>% left_join(sant.short, by = c("sant_ebird2021" = "sciName_ebird2021" ))
+BL.to.Sant %>% filter(!is.na(match)) # 10,719
 
-santageli.df %>% group_by(sciName_ebird2021) %>% filter(n()>1)
+write.csv(BL.to.Sant, paste0(data.path, "Data/Santageli_et_al_Aesthetics/IUCN.Santageli.taxo.match.csv"))
 
-length(unique(santageli.df$sciname_ebird2019))
-length(unique(santageli.df$sciName_ebird2021)) # 10346
-length(unique(santageli.df$BirdTREE))
-length(unique(santageli.df$sciName_HBWBLv5)) # 9387
-
-santageli.df %>% group_by(sex) %>% tally()
-
-santageli.short <- santageli.df %>% select(sciName_ebird2021) %>% mutate(santageli.pres = 1)
-
-initial <-santageli.short %>% left_join(iucn.taxo.short, by = c("sciName_ebird2021" = "IUCN.name"))
-missing <- initial %>% filter(is.na(status))
-
-aves.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.Jun25.csv")) %>%
-  filter(!is.na(syn.name))
-
-
-f <- data.frame(santageli.name = unique(missing$sciName_ebird2021), pres = 1) %>% 
-  left_join(aves.syns, by = c("santageli.name" = "syn.name"))
-
-# use the most up to date taxonomy given
 
 ## Resolve taxonomy - Soria et al., 2023 ---------------------------------------
-mam.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Jun25.csv")) %>% 
+mam.syns <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.synonyms.MAMMALIA.Oct25.csv")) %>% 
   filter(!is.na(syn.name)) %>% select(-X)
 
 # 6263
@@ -1014,60 +1001,67 @@ soria.short <- soria.df %>% select(iucn2020_binomial, phylacine_binomial)
 length(unique(iucn.mam.taxo.short$IUCN.name))
 d <- iucn.mam.taxo.short %>% group_by(IUCN.name) %>% filter(n()>1)
 
-# 6057 to match to
+# 5946 to match to
 initial.join <- iucn.mam.taxo.short %>% 
   left_join(soria.short, by = c("IUCN.name" = "iucn2020_binomial")) 
 
-## 314 missing
+dupls.soria <- initial.join %>% group_by(IUCN.name) %>% filter(n()>1) %>%
+  filter(IUCN.name == phylacine_binomial| 
+           phylacine_binomial %in% c("Saguinus fuscicollis", "Lagothrix lagotricha",
+                                     "Petinomys sagitta"))
+initial.join <- initial.join %>% filter(!IUCN.name %in% dupls.soria$IUCN.name) %>%
+  rbind(dupls.soria)
+
+## 311 missing
 initial.missing <- initial.join %>% 
   filter(is.na(phylacine_binomial)) %>% select(-phylacine_binomial)
 
-# 5772 matched
+# 5635 matched
 initial.match <- initial.join %>% 
   filter(!is.na(phylacine_binomial))
 
 ## Dealing with the missing
-# 228 missing
 syn.match <- mam.syns %>% filter(IUCN.name %in% initial.missing$IUCN.name) %>%
   left_join(soria.short, by = c("syn.name" = "iucn2020_binomial"))
-length(unique(syn.match$IUCN.name)) # 179 have syns to check
+length(unique(syn.match$IUCN.name)) # 252 have syns to check
 
-# 157 direct matches
+# 227 direct matches
 syn.match.1 <- syn.match %>% filter(!is.na(phylacine_binomial)) %>%
   group_by(IUCN.name) %>% filter(n()==1) %>%
   select(IUCN.name, syn.name) %>% rename("Soria.sp" = "syn.name")
   
 
-# 8 matches to review
+# 18 matches to review
 syn.match.multi <- syn.match %>% filter(!is.na(phylacine_binomial)) %>%
   group_by(IUCN.name) %>% filter(n()>1)
 length(unique(syn.match.multi$IUCN.name))
 write.csv(syn.match.multi, paste0(data.path,
                                   "Data/Soria.et.al.COMBINE/syn.multi.out.csv"))
 
-# 14 missing
+# 16 missing
 syn.match.missing <- syn.match %>% 
   group_by(IUCN.name) %>% filter(all(is.na(phylacine_binomial))) %>%
   group_by(IUCN.name) %>% tally()
 
-# 132 missing
+# 59 missing
 original.missing <- initial.missing %>% filter(!IUCN.name %in% mam.syns$IUCN.name) %>%
   group_by(IUCN.name) %>% tally()
 
-# totalling 146 
+# totalling 75 
 write.csv(rbind(syn.match.missing, original.missing), paste0(data.path,
                                   "Data/Soria.et.al.COMBINE/missing.out.csv"))
 
 syn.multi.in <- read.csv(paste0(data.path, "Data/Soria.et.al.COMBINE/syn.multi.in.csv"))
-missing.in <- read.csv(paste0(data.path, "Data/Soria.et.al.COMBINE/missing.in.csv"))
+missing.in <- read.csv(paste0(data.path, "Data/Soria.et.al.COMBINE/missing.in.csv")) %>% select(-X)
 
 # compile
 initial.clean <- initial.match %>% select(IUCN.name) %>% mutate(Soria.sp = IUCN.name)
 syn.multi.clean <- syn.multi.in %>% select(IUCN.name, syn.name) %>% rename("Soria.sp" = "syn.name")
 
-#5940 (inc. 57 no match)
+#5946 (inc. 65 no match)
 Soria.match <- rbind(initial.clean, syn.multi.clean, missing.in, syn.match.1) %>%
   distinct()
+Soria.match %>% filter(Soria.sp == "MISSING")
 
 write.csv(Soria.match, paste0(data.path,
                                "Data/Soria.et.al.COMBINE/IUCN.Soria.taxo.match.csv"))
