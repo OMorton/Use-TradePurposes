@@ -10,11 +10,13 @@ data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al
 all.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/all.birds.wiki.csv"))
 matched.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.match.csv")) %>%
   select(-X)
+length(unique(matched.wiki.urls$IUCN.name)) # 11021
 
 ## MAMMALS
 all.mam.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/all.mammals.wiki.csv"))
 matched.mam.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.Mammals.taxo.match.csv")) %>%
   select(-X)
+length(unique(matched.mam.wiki.urls$IUCN.name)) # 5946
 
 ## Scrape wikipedia - BIRDS ----------------------------------------------------
 
@@ -85,7 +87,7 @@ for (i in 1:nrow(matched.mam.wiki.urls)) {
   # output
   wiki.text.df <- rbind(wiki.text.df, wiki.i)
 }
-# 73 NAs as supplied ()
+# 90 NAs as supplied ()
 check <- wiki.text.df %>% filter(is.na(text))
 # tidy where species binomial names link to two wikipedia pages (4 species)
 # collapse these to one string
@@ -97,8 +99,8 @@ wiki.text.df2 <- wiki.text.df %>%
 write.csv(wiki.text.df2, paste0(data.path, "Data/Wikipedia/all.mammals.wiki.text.csv"))
 ## Text search - BIRDS ---------------------------------------------------------
 
-order.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv"))
-used.sp <- order.use %>% filter(!is.na(code)) #6559 rows
+order.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Oct25.csv"))
+used.sp <- order.use %>% filter(!is.na(code)) #6500 rows
 used.sp %>% group_by(description) %>% tally()
 
 
@@ -194,8 +196,8 @@ write.csv(wiki.key.search,
 
 ## Text search - Mammals -------------------------------------------------------
 
-order.use.MAM <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Jul25.csv"))
-used.sp <- order.use.MAM %>% filter(!is.na(code)) #2472 rows
+order.use.MAM <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Oct25.csv"))
+used.sp <- order.use.MAM %>% filter(!is.na(code)) #2474 rows
 used.sp %>% group_by(description) %>% tally()
 
 
