@@ -59,8 +59,8 @@ data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al
 # what the end purpose is.
 
 ## Processing - 1. IUCN Use and Trade data ----------------------------------------
-IUCN.AVES.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Jun25.csv")) %>% select(-X)
-IUCN.MAM.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Jul25.csv")) %>% select(-X)
+IUCN.AVES.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Oct25.csv")) %>% select(-X)
+IUCN.MAM.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Oct25.csv")) %>% select(-X)
 
 IUCN.use.all <- rbind(IUCN.AVES.use, IUCN.MAM.use)
 
@@ -77,7 +77,7 @@ IUCN.use.tidy <- IUCN.use.all %>%
          level = gsub(", NA", "", level), 
          level = gsub("NA", "unknown", level))
 
-# 6371 species with a use per the IUCN U & T
+# 6335 species with a use per the IUCN U & T
 IUCN.use.sp <- IUCN.use.tidy %>%
   pivot_wider(id_cols = "IUCN.name", names_from = "code",
               values_from = "level") %>%
@@ -85,12 +85,12 @@ IUCN.use.sp <- IUCN.use.tidy %>%
 
 ## Processing - 2. IUCN Threat Classification table ----------------------------
 
-IUCN.AVES.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.Jun25.csv")) %>% select(-X)
-IUCN.MAM.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.MAMMALIA.Jul25.csv")) %>% select(-X)
+IUCN.AVES.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.Oct25.csv")) %>% select(-X)
+IUCN.MAM.thr <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.threat.MAMMALIA.Oct25.csv")) %>% select(-X)
 
 IUCN.thr.all <- rbind(IUCN.AVES.thr, IUCN.MAM.thr)
 
-#2434 sp
+#2499 sp
 IUCN.thr.sp <- IUCN.thr.all %>% filter(code == "5_1_1") %>% 
   mutate(used.per.BRU = 1) %>%
   select(IUCN.name, used.per.BRU)
@@ -235,7 +235,7 @@ lemis.purp.long <- lemis.df %>% filter(!purpose %in% c("E", "B", "L", "Y", "S", 
         LEMIS.UT.1.Year = ifelse(description %in% c("CAL", "CAV", "LEG", "SOU") &
                               purpose != "H", sYear, NA))
 
-# 3315 sp
+# 3310 sp
 LEMIS.sp <- lemis.purp.long %>% group_by(IUCN.name) %>%
   summarise(LEMIS.UT.15 = ifelse(sum(LEMIS.UT.15)>=1, 1, 0),
             LEMIS.UT.14 = ifelse(sum(LEMIS.UT.14)>=1, 1, 0),
@@ -306,7 +306,7 @@ CITES.purp.long <- CITES.df %>%
          CITES.UT.3.Year = ifelse(Term == "medicine", Year, NA),
          CITES.UT.6.Year = ifelse(Term == "musk", Year, NA))
 
-# 1699 sp
+# 2030 sp
 CITES.sp <- CITES.purp.long %>% group_by(IUCN.name) %>%
   summarise(CITES.UT.15 = replace_na(ifelse(sum(CITES.UT.15, na.rm = T)>1, 1, 0), 0),
             #CITES.UT.13 = ifelse(sum(CITES.UT.13, na.rm = T)>=1, 1, 0),
@@ -375,22 +375,22 @@ WiTIS.sp <- WiTIS.purp.long %>% group_by(IUCN.name) %>%
 
 ## Collate full use database ---------------------------------------------------
 
-iucn.taxo.AVES <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv")) %>%
+iucn.taxo.AVES <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Oct25.csv")) %>%
   select(IUCN.name, common.name, familyName, orderName, status) %>% mutate(class = "Aves")
-iucn.taxo.MAM <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Jul25.csv"))%>%
+iucn.taxo.MAM <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Oct25.csv"))%>%
   select(IUCN.name, common.name, familyName, orderName, status) %>% mutate(class = "Mammalia")
 
 ## assessment years
-aves.assess <- read.csv(paste0(data.path, "Data/IUCN/aves.assess.metadata.csv")) %>%
+aves.assess <- read.csv(paste0(data.path, "Data/IUCN/aves.assess.metadata.Oct25.csv")) %>%
   rename("IUCN.name" = "taxon_scientific_name", "IUCN.Assess.Year" = "year_published") %>% 
   select(IUCN.name, IUCN.Assess.Year)
-mam.assess <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.csv")) %>%
+mam.assess <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.Oct25.csv")) %>%
   rename("IUCN.name" = "taxon_scientific_name", "IUCN.Assess.Year" = "year_published") %>% 
   select(IUCN.name, IUCN.Assess.Year)
 
 assess.meta <- rbind(mam.assess, aves.assess)
 
-# 17,220 species total, 16,971 extant species
+# 17,221 species total, 16,967 extant species
 iucn.taxo <- rbind(iucn.taxo.MAM, iucn.taxo.AVES) %>% filter(status != "EX")
 
 use.raw <- iucn.taxo %>%
@@ -449,9 +449,9 @@ use.raw <- use.raw %>%
                          CITES.UT.1 == 1|CITES.UT.3 == 1|CITES.UT.6 == 1|
                          WiTIS.UT.12 == 1|WiTIS.UT.3 == 1|WiTIS.UT.6 == 1,
                          1, 0))
-sum(use.raw$use) # 7941 (08/09/25)
-sum(use.raw$any.purpose) # 6723 (08/09/25) 
-use.raw %>% group_by(class) %>% summarise(sum(use)) # 5923 birds, 2018 mammals
+sum(use.raw$use) # 7941 (08/09/25) # 7928 (24/10/25)
+sum(use.raw$any.purpose) # 6723 (08/09/25) 6691 (24/10/25)
+use.raw %>% group_by(class) %>% summarise(sum(use)) # 5910 birds, 2018 mammals
 
 ## Processing - additional Wikipedia filter ------------------------------------
 
@@ -494,13 +494,18 @@ UT.10.flag <- use.raw %>% filter(IUCN.UT.10.sim == 0 & LEMIS.UT.1 == 0 &
 USE.flag <- use.raw %>% filter(use==0) %>%
   filter(IUCN.name %in% wiki.USE$IUCN.name)
 
-# manual review - 2027 species
+# manual review - 2085 species
 to.rev <- data.frame(IUCN.name = unique(c(UT.1.flag$IUCN.name, UT.13.flag$IUCN.name,
                               UT.15.flag$IUCN.name, UT.12.flag$IUCN.name,
                               UT.3.flag$IUCN.name, USE.flag$IUCN.name)))
 
 to.rev.out <- wiki.uses.df %>% select(-text) %>% 
   filter(IUCN.name %in% to.rev$IUCN.name)
+
+to.rev.out %>% filter(!IUCN.name %in% wiki.uses$IUCN.name)
+
+# to.rev.out <- to.rev.out %>% select(-det) %>%
+#   left_join(wiki.uses.df)
 
 # ## update old wiki searches
 # wiki.uses1 <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.in.OLD.VERSION.csv")) %>% select(-X, -X.1)
@@ -520,7 +525,7 @@ write.csv(to.rev.out, paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.out.cs
 
 ## Adding the Wikipedia data ---------------------------------------------------
 
-wiki.uses <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.in.csv")) %>% select(-X)
+wiki.uses <- read.csv(paste0(data.path, "Data/Wikipedia/wiki.flagged.uses.in.csv"))
 wiki.uses <- wiki.uses %>% 
   select(IUCN.name, MAN.food.UT.1, MAN.pet.UT.13, MAN.sport.UT.15, 
          MAN.jewelry.UT.12, MAN.medicine.UT.3, MAN.apparel.UT.10, MAN.generic) %>% 
@@ -563,10 +568,10 @@ use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
                                 MAN.Wiki.UT.3 == 1 |MAN.Wiki.UT.10 == 1, 1, 0))
   
 
-sum(use.raw.wiki$use) # (08/09/25) 8775
-sum(use.raw.wiki$any.purpose) # (08/09/25) 6809
-use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6355, 2420
-write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.csv"))
+sum(use.raw.wiki$use) # (08/09/25) 8797
+sum(use.raw.wiki$any.purpose) # (08/09/25) 6788
+use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6358, 2439
+write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.Oct25.csv"))
 
 
 ## Tidy up final dataset -------------------------------------------------------
@@ -624,15 +629,15 @@ use.df <- use.raw.wiki %>%
 colSums(use.df[,6:21])
 
 ## add class
-mam.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Jul25.csv"))
-aves.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Jun25.csv"))
+mam.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Oct25.csv"))
+aves.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.Oct25.csv"))
 class.df <- rbind(mam.taxo %>% select(IUCN.name) %>% mutate(Class = "Mammalia"),
                   aves.taxo %>% select(IUCN.name) %>% mutate(Class = "Aves"))
 
 use.df <- use.df %>% 
   left_join(class.df)
 
-write.csv(use.df, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.csv"))
+write.csv(use.df, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Oct25.csv"))
 
 ## manual checking
 t <- use.raw.wiki %>% select(IUCN.name, use, contains("15")) %>%
