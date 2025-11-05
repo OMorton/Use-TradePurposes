@@ -10,7 +10,7 @@ library(cowplot)
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
-use.all <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.csv"))
+use.all <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Oct25.csv"))
 use.all.birds <- use.all %>% filter(Class == "Aves")
 use.all.mam <- use.all %>% filter(Class == "Mammalia")
 
@@ -41,13 +41,13 @@ use.ovr <- use.status.sum %>% filter(use.coarse == "use") %>%
 use.unknown <- use.status.sum %>% filter(use.coarse == "used.no.purpose") %>%
   group_by(Class,use.coarse) %>% summarise(sp.count = sum(sp.count))
 
-use.plt <- ggplot(use.status.sum, aes(use.coarse, sp.count, fill = status)) +
+use.aves <- ggplot(filter(use.status.sum, Class == "Aves" ), aes(use.coarse, sp.count, fill = status)) +
   #geom_rect(xmin = 0.5, xmax = 1.5, ymin = -Inf, ymax = Inf, fill = "grey") +
-  facet_wrap(~Class, scales = "free_y") +
+  #facet_wrap(~Class, scales = "free_y") +
   geom_col() +
-  geom_col(data = use.ovr, 
+  geom_col(data = filter(use.ovr, Class == "Aves" ), 
            fill = NA, colour = "black", linewidth = .75) +
-  geom_col(data = use.unknown, 
+  geom_col(data = filter(use.unknown, Class == "Aves" ), 
            fill = NA, colour = "red", linewidth = .75) +
   scale_x_discrete(limits = c("use", "pets.13", "food.hum.1", "sport.15",
                               "jewellery.12", "apparel.10", "med.3", "other_known", 
@@ -55,7 +55,9 @@ use.plt <- ggplot(use.status.sum, aes(use.coarse, sp.count, fill = status)) +
                    labels = c("Total", "Pets", "Food", "Sport", "Ornamental \nproducts",
                               "Apparel","Medicinal", "Other \n(Known)", 
                               "Purpose \nunknown")) +
-  scale_fill_manual(values = c("black", "#67001f", "#d6604d", "#fddbc7", "#92c5de", "#2166ac", "grey15")) +
+  #scale_fill_manual(values = c("black", "#67001f", "#d6604d", "#fddbc7", "#92c5de", "#2166ac", "grey15")) +
+  scale_fill_manual(values = c("black", "#3f007d", "#6a51a3", "#807dba", "#bcbddc", "#efedf5", "grey50")) +
+  
   xlab("Use and purpose") +
   ylab("Species") +
   
@@ -65,6 +67,33 @@ use.plt <- ggplot(use.status.sum, aes(use.coarse, sp.count, fill = status)) +
                                    face = c("bold", "plain", "plain", "plain",
                                             "plain", "plain", "plain", "plain")))
 
+use.mam <- ggplot(filter(use.status.sum, Class == "Mammalia" ), aes(use.coarse, sp.count, fill = status)) +
+  #geom_rect(xmin = 0.5, xmax = 1.5, ymin = -Inf, ymax = Inf, fill = "grey") +
+  #facet_wrap(~Class, scales = "free_y") +
+  geom_col() +
+  geom_col(data = filter(use.ovr, Class == "Mammalia" ), 
+           fill = NA, colour = "black", linewidth = .75) +
+  geom_col(data = filter(use.unknown, Class == "Mammalia" ), 
+           fill = NA, colour = "red", linewidth = .75) +
+  scale_x_discrete(limits = c("use", "pets.13", "food.hum.1", "sport.15",
+                              "jewellery.12", "apparel.10", "med.3", "other_known", 
+                              "used.no.purpose"),
+                   labels = c("Total", "Pets", "Food", "Sport", "Ornamental \nproducts",
+                              "Apparel","Medicinal", "Other \n(Known)", 
+                              "Purpose \nunknown")) +
+  #scale_fill_manual(values = c("black", "#67001f", "#d6604d", "#fddbc7", "#92c5de", "#2166ac", "grey15")) +
+  scale_fill_manual(values = c("black", "#662506", "#cc4c02", "#fe9929", "#fec44f", "#fff7bc", "grey50")) +
+  
+  xlab("Use and purpose") +
+  ylab("Species") +
+  
+  theme_minimal() +
+  theme(legend.position = "none", strip.text.x.top = element_blank(),
+        axis.text.x = element_text(angle = 45,vjust = 1, hjust = 1, 
+                                   face = c("bold", "plain", "plain", "plain",
+                                            "plain", "plain", "plain", "plain")))
+
+use.plt <- ggarrange(use.aves, use.mam, ncol = 2, labels = c("a", "b"))
 
 use.plt2 <- ggdraw(use.plt) +
   draw_plot(use.plt) +
@@ -74,7 +103,7 @@ use.plt2 <- ggdraw(use.plt) +
              x = 0.9, y = 0.9, width = 0.1, height = 0.1)
 
 ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.use.bar.v1.png",
+       filename = "mam.aves.use.bar.v3.unicol.png",
        use.plt2, bg = "white",
        device = "png", width = 20, height = 12, units = "cm")
 
@@ -102,6 +131,7 @@ for (i in 1:length(uses.ls)) {
                                   use.i, ".tif"))
 }
 
+
 for (i in 1:length(uses.ls)) {
   cat(i, "\n")
   use.i <- uses.ls[[i]]
@@ -114,7 +144,7 @@ for (i in 1:length(uses.ls)) {
 }
 
 ## Make a hotspots raster ------------------------------------------------------
-i <- 1
+i <- 4
 hs.list <- list()
 for (i in 1:length(uses.ls)) {
   use.i <- uses.ls[[i]]
@@ -141,6 +171,7 @@ for (i in 1:length(uses.ls)) {
   hs.list[[paste0(use.i, "combi")]] <- combi.hs 
 }
 
+plot(top10.b)
 ## plot summed rasters ---------------------------------------------------------
 world <- ne_countries(scale = 50, returnclass = "sf")
 map.ls <- list()
@@ -260,7 +291,7 @@ use.arr2 <- ggdraw(use.arr) +
              x = 0.66-0.08, y = 0.96, width = 0.05, height = 0.05)
 
 ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.use.map.v2.png",
+       filename = "mam.aves.use.map.oct25.v3.png",
        use.arr2, bg = "white",
        device = "png", width = 25, height = 25, units = "cm")
 
@@ -287,8 +318,14 @@ use.arr2 <- ggdraw(use.arr) +
              x = 0.66-0.08, y = 0.96, width = 0.05, height = 0.05)
 
 ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.use.map.v2.unicol.png",
+       filename = "mam.aves.use.map.oct25.v3.unicol.png",
        use.arr2, bg = "white",
        device = "png", width = 25, height = 25, units = "cm")
 
 
+## Comparison to other data sets -----------------------------------------------
+
+use.raw <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.csv"))
+
+use.raw %>% group_by(class, used.per.UT) %>% tally()
+use.raw %>% group_by(class, use) %>% tally()
