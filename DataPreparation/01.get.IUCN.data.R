@@ -36,7 +36,7 @@ order.location <- data.frame()
 order.habs <- data.frame()
 order.realms <- data.frame()
 
-
+k <- 1
 for (k in 1:nrow(aves.assess)){
   
   cat(k, "\n")
@@ -50,6 +50,8 @@ for (k in 1:nrow(aves.assess)){
                        IUCN.name = assmt.k$taxon$scientific_name,
                        common.name = filter(assmt.k$taxon$common_names, main == TRUE)$name,
                        SIS = assmt.k$sis_taxon_id, status = assmt.k$red_list_category$code,
+                       pop.trend = ifelse(is.null(assmt.k$population_trend$description$en),
+                                          "Not given",assmt.k$population_trend$description$en),
                        migratory = ifelse(is.null(assmt.k$supplementary_info$movement_patterns),
                                           "Not given",assmt.k$supplementary_info$movement_patterns),
                        EOO = ifelse(is.null(assmt.k$supplementary_info$estimated_extent_of_occurence),
@@ -96,9 +98,14 @@ for (k in 1:nrow(aves.assess)){
     assmt.k$documentation$trend_justification <- NA
   }
   
+  if (is_empty(assmt.k$documentation$rationale)){
+    assmt.k$documentation$rationale <- NA
+  }
+  
   verbose.k <- data.frame(IUCN.name = assmt.k$taxon$scientific_name,
                           assmnt.txt = assmt.k$documentation$rationale,
-                          trend.txt = assmt.k$documentation$trend_justification,
+                          trend.just.txt = assmt.k$documentation$trend_justification,
+                          trend.rat.txt = assmt.k$documentation$rationale,
                           threat.txt = assmt.k$documentation$threats,
                           use.trade.txt = assmt.k$documentation$use_trade)
                           
@@ -138,6 +145,7 @@ mam.assess <- mam.assessments$assessments %>% as.data.frame() %>%
   filter(grepl("Global", scopes))
 
 write.csv(mam.assess, paste0(data.path, "Data/IUCN/mam.assess.metadata.Oct25.csv"))
+mam.assess <- read.csv(paste0(data.path, "Data/IUCN/mam.assess.metadata.Oct25.csv"))
 
 order.txt <- data.frame()
 order.taxo <- data.frame()
@@ -148,6 +156,7 @@ order.habs <- data.frame()
 order.realms <- data.frame()
 
 k <- 4
+sp.k <- filter(mam.assess, taxon_scientific_name == "Euryoryzomys lamia")
 for (k in 1:nrow(mam.assess)){
   
   cat(k, "\n")
@@ -165,6 +174,8 @@ for (k in 1:nrow(mam.assess)){
                                             filter(assmt.k$taxon$common_names, main == TRUE)$name)),
                        
                        SIS = assmt.k$sis_taxon_id, status = assmt.k$red_list_category$code,
+                       pop.trend = ifelse(is.null(assmt.k$population_trend$description$en),
+                                          "Not given",assmt.k$population_trend$description$en),
                        migratory = ifelse(is.null(assmt.k$supplementary_info$movement_patterns),
                                           "Not given",assmt.k$supplementary_info$movement_patterns),
                        EOO = ifelse(is.null(assmt.k$supplementary_info$estimated_extent_of_occurence),
@@ -211,9 +222,14 @@ for (k in 1:nrow(mam.assess)){
     assmt.k$documentation$trend_justification <- NA
   }
   
+  if (is_empty(assmt.k$documentation$rationale)){
+    assmt.k$documentation$rationale <- NA
+  }
+  
   verbose.k <- data.frame(IUCN.name = assmt.k$taxon$scientific_name,
                           assmnt.txt = assmt.k$documentation$rationale,
-                          trend.txt = assmt.k$documentation$trend_justification,
+                          trend.just.txt = assmt.k$documentation$trend_justification,
+                          trend.rat.txt = assmt.k$documentation$rationale,
                           threat.txt = assmt.k$documentation$threats,
                           use.trade.txt = assmt.k$documentation$use_trade)
   
