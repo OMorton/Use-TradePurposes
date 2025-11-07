@@ -7,12 +7,10 @@ library(ggpubr)
 library(png)
 library(grid)
 library(cowplot)
-
 library(clootl)
 library(ape)
 library(phytools)
 library(ggtree)
-library(ggplot2)
 
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
@@ -177,7 +175,7 @@ ggtree(order_tree_ultra, layout = "rectangular") +
   geom_tiplab(size = 3, hjust = 0, fontface = "italic") 
 
 clean.tree <- ggtree(order_tree_ultra, layout = "rectangular") +
-  coord_flip(xlim = c(0.4, 0)) +              
+  coord_flip(xlim = c(0.35, 0)) +              
   scale_x_reverse() +   
   theme_void()
 
@@ -191,7 +189,7 @@ aves.tree.arrange <-ggarrange(clean.tree,
                                         order.plt.ls$PASSERIFORMES, order.plt.ls$PSITTACIFORMES,
                                         order.plt.ls$PICIFORMES, order.plt.ls$ACCIPITRIFORMES,
                                         order.plt.ls$STRIGIFORMES,
-                                        ncol = 10), nrow = 3, heights = c(1, .15, .5))
+                                        ncol = 10), nrow = 3, heights = c(.9, .25, 1))
 
 ## mams
 mam.sr <- use.long %>% filter(pres == 1, !use.group %in% c("no.purpose", "use", "used.no.purpose"), Class == "Mammalia") %>% 
@@ -252,8 +250,8 @@ ggtree(mam.order.tree, layout = "rectangular") +
   geom_tiplab(size = 3, hjust = 0, fontface = "italic") 
 
 mam.order.tree.plt <- ggtree(mam.order.tree, layout = "rectangular") +
-  coord_flip() +              
-  scale_x_reverse() +   
+  coord_flip(xlim = c(130, 0)) +              
+  scale_x_reverse() +
   theme_void()
 
 empty <- ggplot() + theme_void()
@@ -264,7 +262,7 @@ mam.tree.arrange <- ggarrange(mam.order.tree.plt,
                                         mam.order.plt.ls$LAGOMORPHA, mam.order.plt.ls$RODENTIA,
                                         mam.order.plt.ls$EULIPOTYPHLA, mam.order.plt.ls$CHIROPTERA,
                                         mam.order.plt.ls$CARNIVORA, mam.order.plt.ls$ARTIODACTYLA,
-                                        ncol = 10), nrow = 3, heights = c(1, 0.15, .5))
+                                        ncol = 10), nrow = 3, heights = c(.95, 0.25, 1))
 
 ## full arrange
 
@@ -280,48 +278,48 @@ full.fig1.2 <- ggdraw(full.fig1) +
              x = 0.93, y = 0.94, width = 0.05, height = 0.05) +
   ## birds
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Anas.crecca.anseriformes.png"),
-             x = 0.045, y = .43, width = 0.035, height = 0.035) +
+             x = 0.045, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Lagopus.lagopus.galliformes.png"),
-             x = 0.145, y = .43, width = 0.035, height = 0.035) +
+             x = 0.145, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Streptopelia.decaocto.columbiformes.png"),
-             x = 0.24, y = .43, width = 0.035, height = 0.035) +
+             x = 0.24, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Uria.aalge.charadiformes.png"),
-             x = 0.34, y = .43, width = 0.035, height = 0.035) +
+             x = 0.34, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Caprimulgus.caprimulgiformes.png"),
-             x = 0.435, y = .43, width = 0.035, height = 0.035) +
+             x = 0.435, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Pycnonotus leucogenis.passeriformes.png"),
-             x = 0.535, y = .43, width = 0.035, height = 0.035) +
+             x = 0.535, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Cyanopsitta spixii.psittaciformes.png"),
-             x = 0.635, y = .43, width = 0.035, height = 0.035) +
+             x = 0.635, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Ramphastos.piciformes.png"),
-             x = 0.735, y = .43, width = 0.035, height = 0.035) +
+             x = 0.735, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Milvus milvus.accipitriformes.png"),
-             x = 0.835, y = .43, width = 0.035, height = 0.035) +
+             x = 0.835, y = .48, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Bubo scandiacus.strigiformes.png"),
-             x = 0.935, y = .43, width = 0.035, height = 0.035) +
+             x = 0.935, y = .48, width = 0.035, height = 0.035) +
   # draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
   #            x = 0.93, y = 0.60, width = 0.05, height = 0.05) +
   ## mam
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Macropus fuliginosus.diprodontia.png"),
-             x = 0.045, y = .1, width = 0.035, height = 0.035) +
+             x = 0.04, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Dasypus novemcinctus.cingulata.png"),
-             x = 0.145, y = .1, width = 0.035, height = 0.035) +
+             x = 0.145, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Bradypus.pilosa.png"),
-             x = 0.24, y = .1, width = 0.035, height = 0.035) +
+             x = 0.24, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Macaca mulatta.primate.png"),
-             x = 0.34, y = .1, width = 0.035, height = 0.035) +
+             x = 0.34, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Sylvilagus bachmani.lagomorpha.png"),
-             x = 0.435, y = .1, width = 0.035, height = 0.035) +
+             x = 0.435, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Nesomyidae.rodentia.png"),
-             x = 0.535, y = .1, width = 0.035, height = 0.035) +
+             x = 0.535, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Erinaceus europaeus.eulipotphyla.png"),
-             x = 0.635, y = .1, width = 0.035, height = 0.035) +
+             x = 0.635, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Myotis daubentonii.chiroptera.png"),
-             x = 0.735, y = .1, width = 0.035, height = 0.035) +
+             x = 0.735, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Ursus arctos.carnivora.png"),
-             x = 0.835, y = .1, width = 0.035, height = 0.035) +
+             x = 0.835, y = .15, width = 0.035, height = 0.035) +
   draw_image(paste0(data.path,"Data/Inset.pics/Fig1/Dama dama.artiodactyla.png"),
-             x = 0.935, y = .1, width = 0.035, height = 0.035) 
+             x = 0.935, y = .15, width = 0.035, height = 0.035) 
 # draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
 #            x = 0.93, y = 0.27, width = 0.05, height = 0.05)
 
