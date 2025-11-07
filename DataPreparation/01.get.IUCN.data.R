@@ -36,7 +36,7 @@ order.location <- data.frame()
 order.habs <- data.frame()
 order.realms <- data.frame()
 
-k <- 1
+k <- 4381
 for (k in 1:nrow(aves.assess)){
   
   cat(k, "\n")
@@ -90,8 +90,8 @@ for (k in 1:nrow(aves.assess)){
     assmt.k$documentation$use_trade <- NA
   }
   
-  if (is_empty(assmt.k$documentation$rationale)){
-    assmt.k$documentation$rationale <- NA
+  if (is_empty(assmt.k$documentation$population)){
+    assmt.k$documentation$population <- NA
   }
   
   if (is_empty(assmt.k$documentation$trend_justification)){
@@ -105,11 +105,10 @@ for (k in 1:nrow(aves.assess)){
   verbose.k <- data.frame(IUCN.name = assmt.k$taxon$scientific_name,
                           assmnt.txt = assmt.k$documentation$rationale,
                           trend.just.txt = assmt.k$documentation$trend_justification,
-                          trend.rat.txt = assmt.k$documentation$rationale,
+                          trend.rat.txt = assmt.k$documentation$population,
                           threat.txt = assmt.k$documentation$threats,
                           use.trade.txt = assmt.k$documentation$use_trade)
                           
-  
   assmt.k$threats$IUCN.name <-assmt.k$taxon$scientific_name
   assmt.k$use_and_trade$IUCN.name <-assmt.k$taxon$scientific_name
   assmt.k$locations$IUCN.name <-assmt.k$taxon$scientific_name
@@ -214,8 +213,8 @@ for (k in 1:nrow(mam.assess)){
     assmt.k$documentation$use_trade <- NA
   }
   
-  if (is_empty(assmt.k$documentation$rationale)){
-    assmt.k$documentation$rationale <- NA
+  if (is_empty(assmt.k$documentation$population)){
+    assmt.k$documentation$population <- NA
   }
   
   if (is_empty(assmt.k$documentation$trend_justification)){
@@ -229,7 +228,7 @@ for (k in 1:nrow(mam.assess)){
   verbose.k <- data.frame(IUCN.name = assmt.k$taxon$scientific_name,
                           assmnt.txt = assmt.k$documentation$rationale,
                           trend.just.txt = assmt.k$documentation$trend_justification,
-                          trend.rat.txt = assmt.k$documentation$rationale,
+                          trend.rat.txt = aassmt.k$documentation$population,
                           threat.txt = assmt.k$documentation$threats,
                           use.trade.txt = assmt.k$documentation$use_trade)
   
