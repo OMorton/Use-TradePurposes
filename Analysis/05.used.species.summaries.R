@@ -26,8 +26,11 @@ use.long <- use.all %>%
   pivot_longer(!c("IUCN.name", "common.name", "Class", "familyName", "orderName",
                   "status"), names_to = "use.group", values_to = "pres") %>%
   mutate(use.coarse = ifelse(use.group %in% c("ex.situ.16", "food.an.2",
-                                              "fuels.7", "other.16", "other.chem.6",
-                                              "other.household.11", "research.14"),
+                                              "poison.4", "man.chem.5",
+                                              "other.chem.6", "fuels.7", 
+                                              "fibre.8", "construct.9",
+                                              "other.household.11", "research.14",
+                                              "other.17"),
                              "other_known", use.group),
          status = factor(status, levels = c("EW", "CR", "EN", "VU", "NT", "LC", "DD")))
 
