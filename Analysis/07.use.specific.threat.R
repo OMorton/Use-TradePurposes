@@ -135,12 +135,16 @@ test.samp <- IUCN.BRU.Thr.multi %>% slice_sample(n = 200) %>% select(IUCN.name, 
 # Likely - use is a threat, use is mentioned in the threat rationale
 # Certain - specific use is mentioned as a key threat in the threat, trend or assessment
 
-# 1. clean up the IUCN text
+# 1. clean up the IUCN text (53 stop words)
 stopwords <- c(
-  "a", "also", "an", "and", "any", "are", "as", "at", "be", "been", "being", 
-  "by", "for", "from", "has", "have", "if", "in", "is", "it", "of", "or", 
-  "still", "that", "the", "there", "this", "to", "were", "where", 
-  "which", "with", "would", "species", "species's")
+  "a", "about", "also", "an", "and", "any", "are", "as", "at", "be", "been", "being", 
+  "by", "can", "for", "from", "has", "have", "if", "in", "into", "include", "including",
+  "included", "includes", "is", "it", "much",
+  "of", "on", "or", "so", "still", "such", "than", "that", "the", "there", "therefore",
+  "this", "to", "were", "where", "which", "with", "within", "would",
+  "wild", "species", "species's",
+  # judgement caveats
+  "thought", "believed", "considered")
 stopwords.pattern <- paste0("\\b(", paste(stopwords, collapse = "|"), ")\\b")
 
 
@@ -210,8 +214,10 @@ meds.3 <- c("\\bmedicin", "\\bremedy", "\\bremedies", "\\bcurative",
 # 16 strings
 apparel.10 <- c("clothes", "clothing", "\\bcloth\\b",
                 "\\bhat\\b", "\\bhats\\b", "leather",
-                "fur trade", "fur buyers", "hunted(?:[^\\w\\.]+\\w+){0,3}[^\\w\\.]+fur\\b",
-                "trapped(?:[^\\w\\.]+\\w+){0,3}[^\\w\\.]+fur\\b", "killed(?:[^\\w\\.]+\\w+){0,3}[^\\w\\.]+fur\\b",
+                "fur trade", "fur buyers",
+                "hunted(?:[^\\w\\.]+\\w+){0,3}[^\\w\\.]+fur\\b",
+                "trapped(?:[^\\w\\.]+\\w+){0,3}[^\\w\\.]+fur\\b", 
+                "killed(?:[^\\w\\.]+\\w+){0,3}[^\\w\\.]+fur\\b",
                 "\\bskins\\b", "skin trade", 
                 "skin(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+trade\\b", 
                 "skin(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+market\\b", 
@@ -250,53 +256,127 @@ sport.15 <- c("\\btrophy\\b",
 
 # Negative impact string
 # 33 strings
-neg.string <- c("(?<!not )declin", "(?<!poaching )declin", "(?<!hunting )declin",
+neg.string <- c("(?<!\\bnot\\s)declin", "(?<!poaching )declin", "(?<!hunting )declin",
                 "(?<!offtakes )declin", "(?<!volumes )declin",
-                "(?<!not )decreas", "(?<!poaching )decreas", "(?<!hunting )decreas",
+                "(?<!\\bnot\\s)decreas", "(?<!poaching )decreas", "(?<!hunting )decreas",
                 "(?<!offtakes )decreas", "(?<!volumes )decreas",
-                "(?<!not )\\bthreat", "extinct",
-                "(?<!not )negative impact", "(?<!not )negatively impact", "(?<!not )serious impact", "(?<!not )seriously impact",
-                "(?<!not )negative effect", "(?<!not )negatively effect", "(?<!not )serious effect", "(?<!not )seriously effect",
-                "(?<!not )negative affect", "(?<!not )negatively affect", "(?<!not )serious affect", "(?<!not )seriously affect",
-                "(?<!not )reduced numbers", "(?<!not )reduced population", "(?<!not )population reduc",
+                "(?<!not|nor )negative impact", "(?<!not|nor )negatively impact",
+                "(?<!not )serious impact", "(?<!not )seriously impact",
+                "(?<!not|nor )negative effect", "(?<!not|nor )negatively effect",
+                "(?<!not|nor )serious effect", "(?<!not|nor )seriously effect",
+                "(?<!not|nor )negative affect", "(?<!not|nor )negatively affect",
+                "(?<!not|nor )serious affect", "(?<!not|nor )seriously affect",
+                "(?<!not|nor )reduced numbers", "(?<!not|nor )reduced population", 
+                "(?<!\\bnot\\s)population reduc",
                 "(?<!not )unsustain", "not sustainab", "(?<!not )exceed sustainab",
                 "(?<!not )above sustainab", "(?<!not )overexploit",
-                "(?<!not )reduction", "(?<!not )overharvested")
+                "(?<!not )reduction", "(?<!not )overharvested",
+                #"(?<!\\b(?:not|nor)\\s)driving(?:\\s+\\w+)?\\s+population declines",
+                "(?<!\\b(?:not|nor)\\s)driving(?:\\s+\\w+)?\\s+population impacts",
+                "(?<!\\b(?:not|nor)\\s)driving(?:\\s+\\w+)?\\s+population reductions",
+                #"(?<!\\b(?:not|nor)\\s)causing(?:\\s+\\w+)?\\s+population declines",
+                "(?<!\\b(?:not|nor)\\s)causing(?:\\s+\\w+)?\\s+population impacts",
+                "(?<!\\b(?:not|nor)\\s)causing(?:\\s+\\w+)?\\s+population reductions",
+                #"(?<!\\b(?:not|nor)\\s)driving(?:\\s+\\w+)?\\s+declines",
+                "(?<!\\b(?:not|nor)\\s)driving(?:\\s+\\w+)?\\s+impacts",
+                "(?<!\\b(?:not|nor)\\s)driving(?:\\s+\\w+)?\\s+reductions",
+                #"(?<!\\b(?:not|nor)\\s)causing(?:\\s+\\w+)?\\s+declines",
+                "(?<!\\b(?:not|nor)\\s)causing(?:\\s+\\w+)?\\s+impacts",
+                "(?<!\\b(?:not|nor)\\s)causing(?:\\s+\\w+)?\\s+reductions",
+                #"(?<!\\b(?:not|nor)\\s)likely drive decreas",
+                #"(?<!\\b(?:not|nor)\\s)likely driving decreas",
+                #"(?<!\\b(?:not|nor)\\s)likely driven decreas",
+                "(?<!\\b(?:not|nor)\\s)threat", 
+                # "(?<!\\b(?:not|nor)\\s)likely threat",
+                # "(?<!\\b(?:not|nor)\\s)main threat",
+                # "(?<!\\b(?:not|nor)\\s)seem major threat",
+                # "(?<!\\b(?:not|nor)\\s)seem important threat",
+                # "(?<!\\b(?:not|nor)\\s)major threat", 
+                # "(?<!\\b(?:not|nor)\\s)key threat",
+                # "(?<!\\b(?:not|nor)\\s)likely major threat",
+                # "(?<!\\b(?:not|nor)\\s)likely main threat",
+                # "(?<!\\b(?:not|nor)\\s)likely key threat", 
+                # "(?<!\\b(?:not|nor)\\s)likely significant threat", 
+                # "(?<!\\b(?:not|nor)\\s)likely threat",
+                # "(?<!\\b(?:not|nor)\\s)currently major threat", 
+                # "(?<!\\b(?:not|nor)\\s)currently key threat",
+                # "(?<!\\b(?:not|nor)\\s)currently threat", 
+                # "(?<!\\b(?:not|nor)\\s)important threat",
+                # "(?<!\\b(?:not|nor)\\s)considered threat",
+                # "(?<!\\b(?:not|nor)\\s)meaningful threat",
+                # "(?<!\\b(?:not|nor)\\s)considered meaningful threat",
+                # "(?<!\\b(?:not|nor)\\s)considered main threat",
+                # "(?<!\\b(?:not|nor)\\s)considered key threat",
+                # "(?<!\\b(?:not|nor)\\s)considered significant threat", 
+                # "(?<!\\b(?:not|nor)\\s)considered major threat",
+                # "(?<!\\b(?:not|nor)\\s)pose meaningful threat",
+                # "(?<!\\b(?:not|nor)\\s)pose significant threat",
+                # "(?<!\\b(?:not|nor)\\s)pose substantial threat",
+                "(?<!\\b(?:not|nor)\\s)drive extinct", 
+                "(?<!\\b(?:not|nor)\\s)cause extinct",
+                "(?<!\\b(?:not|nor)\\s)increase extinct")
 
 # no negative impact string
 # 45 strings
-no.neg.string <- c("(?:not|nor) declin", "no declin", "no evidence declin", 
-                 "unlikely drive declin","(?:not|nor) likely drive declin",
-                 "unlikely drive impact","(?:not|nor) likely impact",
-                 "unlikely drive effect","(?:not|nor) likely effect",
-                 "unlikely drive affect","(?:not|nor) likely affect",
+no.neg.string <- c("\\b(?:not|nor) declin", "no declin", "no evidence declin", 
+                 "unlikely drive declin","\\b(?:not|nor) likely drive declin",
+                 "unlikely drive impact","\\b(?:not|nor) likely impact",
+                 "unlikely drive effect","\\b(?:not|nor) likely effect",
+                 "unlikely drive affect","\\b(?:not|nor) likely affect",
                  "minimal impact", "no impact",
-                 "(?<!not )negligible decline", "(?<!not )negligible impact", 
+                 "\\b(?<!not )negligible decline",
+                 "\\b(?<!not )negligible impact", 
                  "does not appear cause declin",
                  "not decreas", "no decreas", "no evidence decreas", 
                  "unlikely decreas", "unlikely drive decreas",
-                 "(?:not|nor) likely drive decreas", "does not appear cause decreas",
-                 "(?:not|nor) threat", "(?:not|nor) likely threat", "unlikely threat",
-                 "(?:not|nor) seem major threat", "(?:not|nor) seem key threat",
-                 "(?:not|nor) seem important threat",
-                 "(?:not|nor) major threat", "(?:not|nor) key threat",
-                 "(?:not|nor) likely major threat", "(?:not|nor) likely key threat", "(?:not|nor) likely threat",
-                 "(?:not|nor) currently major threat", "(?:not|nor) currently key threat", "(?:not|nor) currently threat", 
-                 "(?:not|nor) important threat", "(?:not|nor) considered threat", "(?:not|nor) meaningful threat",
-                 "(?:not|nor) pose meaningful threat", "(?:not|nor) pose significant threat",
-                 "(?:not|nor) pose substantial threat",
-                 "(?:not|nor) drive extinct", "(?:not|nor) cause extinct", "(?:not|nor) increase extinct",
-                 "not elevate extinct", "(?<!not)\\bsustainable", "(?<!not)\\bsustainably",
+                 "\\b(?:not|nor) likely drive decreas", "does not appear cause decreas",
+                 "\\b(?:not|nor) threat", "(?:not|nor) likely threat", "unlikely threat",
+                 "\\b(?:not|nor) seem major threat", 
+                 "\\b(?:not|nor) seem key threat",
+                 "\\b(?:not|nor) seem important threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+major threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+key threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+main threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+likely major threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+likely key threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+likely major threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+likely key threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+likely threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+currently major threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+currently key threat", 
+                 "\\b(?:not|nor) currently threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+important threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+considered threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+considered key threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+considered main threat", 
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+considered major threat", 
+                 "\\b(?:not|nor) meaningful threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+pose meaningful threat",
+                 "\\b(?:not|nor) pose significant threat",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+pose substantial threat",
+                 "\\b(?:not|nor) drive extinct", 
+                 "\\b(?:not|nor) cause extinct", 
+                 "\\b(?:not|nor) increase extinct",
+                 "not elevate extinct", 
+                 "\\b(?<!not)\\bsustainable", 
+                 "\\b(?<!not)\\bsustainably",
                  "not overexploit",
-                 "(?:not|nor) negatively impact", "(?:not|nor) negatively effect",
+                 "\\b(?:not|nor) negatively impact", 
+                 "\\b(?:not|nor) negatively effect",
                  "not thought significant", "not significant",
-                 "(?:not|nor) driving population reduc", "no population reduc",
-                 "(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population declines",
-                 "(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population impacts",
-                 "(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population reductions",
-                 "(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population declines",
-                 "(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population impacts",
-                 "(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population reductions",
+                 "\\b(?:not|nor) driving population reduc", "no population reduc",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population declines",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population impacts",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population reductions",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population declines",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population impacts",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population reductions",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+declines",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+impacts",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+reductions",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+declines",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+impacts",
+                 "\\b(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+reductions",
                  "(?<!not )positive impact", "(?<!no )positive impact")
 
 # unknown impact string
@@ -317,7 +397,7 @@ str.tally <- data.frame(use = c("food", "meds", "apparel", "aesthetics", "pets",
            no.neg.str = length(no.neg.string),
            unc.str = length(unc.string)) %>%
   mutate(total = (use.str*neg.str) +(use.str*no.neg.str) + (use.str*unc.str))
-sum(str.tally$total) # 14,715
+sum(str.tally$total) # 17685
 
 # make strings, add exceptions for extra letters after the word.
 # breaks prior to the words are specified were necessary above.
@@ -363,8 +443,8 @@ misleading.str <- paste(misleading.str, collapse = "|")
 IUCN.all.text <- rbind(IUCN.AVES.text, IUCN.MAM.text)
 sp.use.out <- data.frame()
 all.sp.use <- data.frame()
-i <- 4311
-j <- 1
+i <- 11276
+j <- 5
 for (i in 1:nrow(IUCN.all.text)) {
   cat(i, "\n")
   # make text block and clean structure - threat and assessment based text
@@ -380,15 +460,14 @@ for (i in 1:nrow(IUCN.all.text)) {
            all.text = gsub("\\s+", " ", all.text) %>% trimws()) %>%  # remove excess ws
     mutate(all.text = gsub(stopwords.pattern, "", all.text, ignore.case = TRUE),
            all.text = tolower(all.text), # put into lower case
-           all.text = gsub("  ", " ", all.text), # remove blocks of space
-           all.text = gsub("   ", " ", all.text),
            all.text = gsub("litt.", "litt", all.text),
            all.text = gsub("et al.", "et al", all.text),
            all.text = gsub("pers. comm.", "pers comm", all.text),
            all.text = gsub("however", ".", all.text), # split sentences at however (see threats https://www.iucnredlist.org/species/45430583/179386817)
            all.text = str_replace_all(all.text, "(?<=\\b[A-Za-z])\\.", ""),
            # Remove irrelevant strings risking confusion
-           all.text = gsub(misleading.str, "", all.text, ignore.case = TRUE))
+           all.text = gsub(misleading.str, "", all.text, ignore.case = TRUE)) %>%
+    mutate(all.text = gsub("\\s+", " ", all.text) %>% trimws())
   
   # make text block and clean structure - threat and assessment based text + U&T text
   text.inc.UT.i <- IUCN.all.text[i,] %>%
@@ -397,22 +476,21 @@ for (i in 1:nrow(IUCN.all.text)) {
                             use.trade.txt,
                             sep = " ")) %>%
     select(IUCN.name, all.text) %>%
-    mutate(all.text = gsub("<[^>]+>", "", all.text),# remove html
+    mutate(all.text = gsub("<[^>]+>", " ", all.text),# remove html
            all.text = trimws(all.text),
            all.text = gsub("&#160;|\\u00A0", " ", all.text),
            # Collapse multiple spaces
            all.text = gsub("\\s+", " ", all.text) %>% trimws()) %>%  # remove excess ws
     mutate(all.text = gsub(stopwords.pattern, "", all.text, ignore.case = TRUE),
            all.text = tolower(all.text), # put into lower case
-           all.text = gsub("  ", " ", all.text), # remove blocks of space
-           all.text = gsub("   ", " ", all.text),
            all.text = gsub("litt.", "litt", all.text),
            all.text = gsub("et al.", "et al", all.text),
            all.text = gsub("pers. comm.", "pers comm", all.text),
            all.text = gsub("however", ".", all.text), # split sentences at however (see threats https://www.iucnredlist.org/species/45430583/179386817)
            all.text = str_replace_all(all.text, "(?<=\\b[A-Za-z])\\.", ""),
            # Remove irrelevant strings risking confusion
-           all.text = gsub(misleading.str, "", all.text, ignore.case = TRUE))
+           all.text = gsub(misleading.str, "", all.text, ignore.case = TRUE)) %>%
+    mutate(all.text = gsub("\\s+", " ", all.text) %>% trimws())
   
   # split threat, assesment and trend text into sentences.
   sentences.i <- str_split(text.i$all.text, "(?<=[.!?])\\s+")[[1]]
@@ -503,14 +581,6 @@ write.csv(performance.out.tidy,
           paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.final.testset.Oct25.PERFORMANCE.METRICS.Oct25.csv"))
 
 
-test.dat100
-all.sp.use
-
-check.i <- data.frame(IUCN.name = test.dat100$IUCN.name,
-                      est = as.factor(fit.use.i$neg.mention), 
-                      test = as.factor(select(test.dat100, paste0(i, ".threat"))[[1]]))
-
-# https://www.iucnredlist.org/species/22686268/179290500
 
 ## Plotting --------------------------------------------------------------------
 all.sp.use <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.Nov25.csv"))
@@ -563,7 +633,8 @@ classif.none2 <- classif.none %>%
                                   no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
                                 neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
                                 neg.mention == TRUE & no.neg.mention == FALSE & unknown.mention == TRUE ~ "MANUAL",
-                                neg.mention == FALSE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL"),
+                                neg.mention == FALSE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == FALSE ~ "MANUAL"),
          uses = "none")
 
 classif.multi2 <- classif.multi %>% 
@@ -585,7 +656,8 @@ classif.multi2 <- classif.multi %>%
                                   no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
                                 neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
                                 neg.mention == TRUE & no.neg.mention == FALSE & unknown.mention == TRUE ~ "MANUAL",
-                                neg.mention == FALSE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL"),
+                                neg.mention == FALSE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == FALSE ~ "MANUAL"),
          uses = "multi")
 
 f <- rbind(classif.multi2, classif.single2, classif.none2)
@@ -594,8 +666,8 @@ f <- rbind(classif.multi2, classif.single2, classif.none2)
 # manually reviewed
 manual.threat.check <- rbind(classif.multi2, classif.single2, classif.none2) %>%
   filter(use.threat == "MANUAL")
-# write.csv(manual.threat.check, 
-#           paste0(data.path, "Outputs/threat.dataset/IUCN.threat.classif.manual.OUT.csv"))
+write.csv(manual.threat.check,
+          paste0(data.path, "Outputs/threat.dataset/IUCN.threat.classif.manual.OUT.csv"))
 # 23 species
 manual.threat.check.in <- read.csv(paste0(data.path, 
                                           "Outputs/threat.dataset/IUCN.threat.classif.manual.IN.csv"))
