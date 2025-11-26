@@ -259,30 +259,44 @@ neg.string <- c("(?<!not )declin", "(?<!poaching )declin", "(?<!hunting )declin"
                 "(?<!not )negative effect", "(?<!not )negatively effect", "(?<!not )serious effect", "(?<!not )seriously effect",
                 "(?<!not )negative affect", "(?<!not )negatively affect", "(?<!not )serious affect", "(?<!not )seriously affect",
                 "(?<!not )reduced numbers", "(?<!not )reduced population", "(?<!not )population reduc",
-                "(?<!not )unsustain", "not sustain", "(?<!not )exceed sustain", "(?<!not )overexploit",
+                "(?<!not )unsustain", "not sustainab", "(?<!not )exceed sustainab",
+                "(?<!not )above sustainab", "(?<!not )overexploit",
                 "(?<!not )reduction", "(?<!not )overharvested")
 
 # no negative impact string
 # 45 strings
-no.neg.string <- c("not declin", "no declin", "no evidence declin", 
-                 "unlikely drive declin","not likely drive declin",
-                 "unlikely drive impact","not likely impact",
-                 "unlikely drive effect","not likely effect",
-                 "unlikely drive affect","not likely affect",
+no.neg.string <- c("(?:not|nor) declin", "no declin", "no evidence declin", 
+                 "unlikely drive declin","(?:not|nor) likely drive declin",
+                 "unlikely drive impact","(?:not|nor) likely impact",
+                 "unlikely drive effect","(?:not|nor) likely effect",
+                 "unlikely drive affect","(?:not|nor) likely affect",
                  "minimal impact", "no impact",
+                 "(?<!not )negligible decline", "(?<!not )negligible impact", 
                  "does not appear cause declin",
                  "not decreas", "no decreas", "no evidence decreas", 
                  "unlikely decreas", "unlikely drive decreas",
-                 "not likely drive decreas", "does not appear cause decreas",
-                 "not threat", "not likely threat", "unlikely threat",
-                 "not seem major threat", "not seem key threat",
-                 "not seem important threat", "not major threat", "not key threat",
-                 "not important threat", "not considered threat",
-                 "not drive extinct", "not cause extinct", "not increase extinct",
-                 "not elevate extinct", "\\bsustain", "not overexploit",
-                 "not negatively impact", "not negatively effect",
+                 "(?:not|nor) likely drive decreas", "does not appear cause decreas",
+                 "(?:not|nor) threat", "(?:not|nor) likely threat", "unlikely threat",
+                 "(?:not|nor) seem major threat", "(?:not|nor) seem key threat",
+                 "(?:not|nor) seem important threat",
+                 "(?:not|nor) major threat", "(?:not|nor) key threat",
+                 "(?:not|nor) likely major threat", "(?:not|nor) likely key threat", "(?:not|nor) likely threat",
+                 "(?:not|nor) currently major threat", "(?:not|nor) currently key threat", "(?:not|nor) currently threat", 
+                 "(?:not|nor) important threat", "(?:not|nor) considered threat", "(?:not|nor) meaningful threat",
+                 "(?:not|nor) pose meaningful threat", "(?:not|nor) pose significant threat",
+                 "(?:not|nor) pose substantial threat",
+                 "(?:not|nor) drive extinct", "(?:not|nor) cause extinct", "(?:not|nor) increase extinct",
+                 "not elevate extinct", "(?<!not)\\bsustainable", "(?<!not)\\bsustainably",
+                 "not overexploit",
+                 "(?:not|nor) negatively impact", "(?:not|nor) negatively effect",
                  "not thought significant", "not significant",
-                 "not driving population reduc", "no population reduc",
+                 "(?:not|nor) driving population reduc", "no population reduc",
+                 "(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population declines",
+                 "(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population impacts",
+                 "(?:not|nor)(?:\\s+\\w+)?\\s+driving(?:\\s+\\w+)?\\s+population reductions",
+                 "(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population declines",
+                 "(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population impacts",
+                 "(?:not|nor)(?:\\s+\\w+)?\\s+causing(?:\\s+\\w+)?\\s+population reductions",
                  "(?<!not )positive impact", "(?<!no )positive impact")
 
 # unknown impact string
@@ -303,7 +317,7 @@ str.tally <- data.frame(use = c("food", "meds", "apparel", "aesthetics", "pets",
            no.neg.str = length(no.neg.string),
            unc.str = length(unc.string)) %>%
   mutate(total = (use.str*neg.str) +(use.str*no.neg.str) + (use.str*unc.str))
-sum(str.tally$total) # 12,015
+sum(str.tally$total) # 14,715
 
 # make strings, add exceptions for extra letters after the word.
 # breaks prior to the words are specified were necessary above.
@@ -343,12 +357,13 @@ misleading.str <- c("medicine trees", "medicinal trees",
 misleading.str <- paste(misleading.str, collapse = "|")
 
 
+## Run the text classifier -----------------------------------------------------
 #test.dat100 <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.testset.Oct25.LABELLED.csv"))
 
 IUCN.all.text <- rbind(IUCN.AVES.text, IUCN.MAM.text)
 sp.use.out <- data.frame()
 all.sp.use <- data.frame()
-i <- 36
+i <- 4311
 j <- 1
 for (i in 1:nrow(IUCN.all.text)) {
   cat(i, "\n")
@@ -358,7 +373,7 @@ for (i in 1:nrow(IUCN.all.text)) {
     mutate(all.text = paste(threat.txt, assmnt.txt, trend.just.txt, trend.rat.txt,
                             sep = " ")) %>%
     select(IUCN.name, all.text) %>%
-    mutate(all.text = gsub("<[^>]+>", "", all.text),# remove html
+    mutate(all.text = gsub("<[^>]+>", " ", all.text),# remove html
            all.text = trimws(all.text),
            all.text = gsub("&#160;|\\u00A0", " ", all.text),
            # Collapse multiple spaces
@@ -420,9 +435,9 @@ for (i in 1:nrow(IUCN.all.text)) {
               unknown.mention = any(unknown.matches == TRUE),
               # verbose
               gen.string = paste(sentences.i[gen.matches], collapse = 'END'),
-              neg.string = paste(sentences.i[neg.matches], collapse = 'END'),
-              no.neg.string = paste(sentences.i[no.neg.matches], collapse = 'END'),
-              unknown.string = paste(sentences.i[unknown.matches], collapse = 'END'))
+              neg.string = paste(sentences.inc.UT.i[neg.matches], collapse = 'END'),
+              no.neg.string = paste(sentences.inc.UT.i[no.neg.matches], collapse = 'END'),
+              unknown.string = paste(sentences.inc.UT.i[unknown.matches], collapse = 'END'))
     
     sp.use.out <- rbind(sp.use.out, sp.use.j)
     
@@ -433,12 +448,12 @@ for (i in 1:nrow(IUCN.all.text)) {
   sp.use.out <- data.frame()
 }
 all.sp.use %>% select(IUCN.name, sentences) %>% distinct() %>%
-  summarise(sum(sentences)) #180313
-write.csv(all.sp.use, paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.csv"))
+  summarise(sum(sentences)) #206017
+write.csv(all.sp.use, paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.Nov25.csv"))
 
 
-## Test fit --------------------------------------------------------------------
-
+## Test classifier -------------------------------------------------------------
+all.sp.use <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.Nov25.csv"))
 test.dat200 <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.final.testset.Oct25.LABELLED.csv"))
 
 test.dat200 <- test.dat200 %>% arrange(IUCN.name) %>%
@@ -485,7 +500,7 @@ performance.out.tidy <- performance.out %>%
   select(use, type, tally, kappa, acc, acc.nir, spec, sens, bal.acc)
 
 write.csv(performance.out.tidy, 
-          paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.final.testset.Oct25.PERFORMANCE.METRICS.csv"))
+          paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.final.testset.Oct25.PERFORMANCE.METRICS.Oct25.csv"))
 
 
 test.dat100
@@ -497,28 +512,135 @@ check.i <- data.frame(IUCN.name = test.dat100$IUCN.name,
 
 # https://www.iucnredlist.org/species/22686268/179290500
 
-## Misc ------------------------------------------------------------------------
+## Plotting --------------------------------------------------------------------
+all.sp.use <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.Nov25.csv"))
 
+# Tot 1558 sp.
+classif.single <- all.sp.use %>% filter(IUCN.name %in% IUCN.BRU.Thr.single$IUCN.name) #776 sp.
+classif.none <- all.sp.use %>% filter(IUCN.name %in% IUCN.BRU.Thr.none$IUCN.name) #153 sp.
+classif.multi <- all.sp.use %>% filter(IUCN.name %in% IUCN.BRU.Thr.multi$IUCN.name) #629 sp.
 
-thr.gen <- c("threatened hunting", "threatened trapping", "threatened snaring",
-             "threatened exploitation", "threatened overexploitation",
-             "threatened unsustainable","threatened poaching",
-             "threatened mainly hunting", "threatened mainly trapping", "threatened mainly snaring",
-             "threatened mainly exploitation", "threatened mainly overexploitation",
-             "threatened mainly unsustainable", "threatened mainly poaching",
-             "hunting threat", "trapping threat", "snaring threat")
+#
+classif.single2 <- classif.single %>% 
+  mutate(use.threat = case_when(gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Insufficient infomation",
+                                gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == TRUE & unknown.mention == FALSE ~ "Unlikely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == TRUE & unknown.mention == FALSE ~ "Unlikely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Potential",
+                                gen.mention == TRUE & neg.mention == TRUE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Highly likely",
+                                gen.mention == FALSE & neg.mention == TRUE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Highly likely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
+                                gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
+                                neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == TRUE & no.neg.mention == FALSE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == FALSE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == FALSE ~ "MANUAL"),
+         uses = "single")
 
-## get text for all BRU species.
-IUCN.all.text <- rbind(IUCN.AVES.text, IUCN.MAM.text)
-IUCN.BRU.multi.txt <- IUCN.all.text %>% filter(IUCN.name %in% IUCN.BRU.Thr.multi$IUCN.name)
+classif.none2 <- classif.none %>% 
+  mutate(use.threat = case_when(gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Insufficient infomation",
+                                gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == TRUE & unknown.mention == FALSE ~ "Unlikely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == TRUE & unknown.mention == FALSE ~ "Unlikely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Potential",
+                                gen.mention == TRUE & neg.mention == TRUE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Highly likely",
+                                gen.mention == FALSE & neg.mention == TRUE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Highly likely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
+                                gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
+                                neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == TRUE & no.neg.mention == FALSE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == FALSE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL"),
+         uses = "none")
 
-IUCN.text.search <- IUCN.BRU.multi.txt %>%
-  mutate(food.1.BRU = str_detect(threat.txt, regex(food.1.str, ignore_case = TRUE)),
-         pets.7.BRU = str_detect(threat.txt, regex(pets.7.str, ignore_case = TRUE)),
-         thr.gen.BRU = str_detect(threat.txt, regex(thr.gen.str, ignore_case = TRUE))) %>%
-  select(-assmnt.txt, -threat.txt, -trend.txt)
+classif.multi2 <- classif.multi %>% 
+  mutate(use.threat = case_when(gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Insufficient infomation",
+                                gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == TRUE & unknown.mention == FALSE ~ "Unlikely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == TRUE & unknown.mention == FALSE ~ "Unlikely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Potential",
+                                gen.mention == TRUE & neg.mention == TRUE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Highly likely",
+                                gen.mention == FALSE & neg.mention == TRUE &
+                                  no.neg.mention == FALSE & unknown.mention == FALSE ~ "Highly likely",
+                                gen.mention == TRUE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
+                                gen.mention == FALSE & neg.mention == FALSE &
+                                  no.neg.mention == FALSE & unknown.mention == TRUE ~ "Insufficient infomation",
+                                neg.mention == TRUE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == TRUE & no.neg.mention == FALSE & unknown.mention == TRUE ~ "MANUAL",
+                                neg.mention == FALSE & no.neg.mention == TRUE & unknown.mention == TRUE ~ "MANUAL"),
+         uses = "multi")
 
-write.csv(IUCN.text.search, paste0(data.path, "Outputs/threat.dataset/pathway2/thr.txt.match.out.csv"))
-html.str <- c("&nbsp;", "&amp;", "&lt;", "&gt;", "&quot;", "&apos;",
-              "&#160;")
-html.str <- paste(html.str, collapse = "|")
+f <- rbind(classif.multi2, classif.single2, classif.none2)
+
+# all species with conflicting statement e.g. negative and uncertain effects
+# manually reviewed
+manual.threat.check <- rbind(classif.multi2, classif.single2, classif.none2) %>%
+  filter(use.threat == "MANUAL")
+# write.csv(manual.threat.check, 
+#           paste0(data.path, "Outputs/threat.dataset/IUCN.threat.classif.manual.OUT.csv"))
+# 23 species
+manual.threat.check.in <- read.csv(paste0(data.path, 
+                                          "Outputs/threat.dataset/IUCN.threat.classif.manual.IN.csv"))
+
+## collate and widen classified data
+all.classify <- rbind(classif.multi2, classif.single2, classif.none2) %>%
+  filter(use.threat != "MANUAL") %>% rbind(manual.threat.check.in)
+all.classify.wide <- all.classify %>% pivot_wider(id_cols = c(IUCN.name, uses), names_from = use, values_from = use.threat)
+
+## get uses
+IUCN.BRU.Thr.sum <- IUCN.BRU.Thr %>% select(IUCN.name, Class, status, BRU.code, scope, severity, timing)
+IUCN.use.tidy.wide <- IUCN.use.tidy %>% select(IUCN.name, code) %>%
+  mutate(use.per.UT = case_when(code == "IUCN.UT.1" ~ "food.UT",
+                         code == "IUCN.UT.3" ~ "medicine.UT",
+                         code == "IUCN.UT.10" ~ "apparel.UT",
+                         code == "IUCN.UT.12" ~ "aesthetic.UT",
+                         code == "IUCN.UT.13" ~ "pets.UT",
+                         code == "IUCN.UT.15" ~ "sport.UT",
+                         .default = "other.known.UT")) %>% select(-code) %>%
+  group_by(IUCN.name, use.per.UT) %>%
+  summarise(pres = 1) %>% pivot_wider(id_cols = IUCN.name, values_from = pres, names_from = use.per.UT)
+
+## append threat and use data
+## for species with no uses then keep any uses that are flagged as a threat or not.
+## for species used for either apparel or 
+t <- all.classify.wide %>% left_join(IUCN.use.tidy.wide) %>%
+  mutate(food = case_when(is.na(food.UT) & uses != "none" ~ NA,
+                          food == "Insufficient infomation" & uses == "none" ~ NA,
+                          .default = food),
+         medicine = case_when(is.na(medicine.UT) & uses != "none" ~ NA,
+                              medicine == "Insufficient infomation" & uses == "none" ~ NA,
+                          .default = medicine),
+         pets = case_when(is.na(pets.UT) & uses != "none" ~ NA,
+                          pets == "Insufficient infomation" & uses == "none" ~ NA,
+                              .default = pets),
+         sport = case_when(is.na(sport.UT) & uses != "none" ~ NA,
+                           sport == "Insufficient infomation" & uses == "none" ~ NA,
+                          .default = sport),
+         aesthetic = case_when(is.na(aesthetic.UT) & is.na(apparel.UT) & uses != "none" ~ NA,
+                               aesthetic == "Insufficient infomation" & is.na(aesthetic.UT) & uses != "none" ~ NA,
+                               aesthetic == "Insufficient infomation" & uses == "none" ~ NA,
+                           .default = aesthetic),
+         apparel = case_when(is.na(aesthetic.UT) & is.na(apparel.UT) & uses != "none" ~ NA,
+                             apparel == "Insufficient infomation" & is.na(apparel.UT) & uses != "none" ~ NA,
+                             apparel == "Insufficient infomation" & uses == "none" ~ NA,
+                               .default = apparel))
+         
+
