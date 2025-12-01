@@ -273,7 +273,7 @@ unique(CITES.df$Purpose)
 # split between medicinal and research)
 # meat is unclear - likely for humans (but could be for animal feed or medicinal use)
 sort(unique(CITES.df$Term))
-length(unique(CITES.purp.long$Taxon))
+#length(unique(CITES.purp.long$Taxon))
 
 CITES.purp.long <- CITES.df %>% 
   filter(!Purpose %in% c("B", "E", "L", "N", "S", "Z", "G", "Q")) %>%
@@ -586,9 +586,13 @@ use.df <- use.raw.wiki %>%
             food.an.2 = ifelse(IUCN.UT.2.sim == 1, 1, 0),
             med.3 = ifelse(IUCN.UT.3.sim == 1|SpUD.UT.3 == 1|MAN.Wiki.UT.3 == 1|
                              LEMIS.UT.3 == 1|CITES.UT.3 == 1|WiTIS.UT.3 == 1, 1, 0),
+            poison.4 = ifelse(IUCN.UT.4.sim == 1, 1, 0),
+            man.chem.5 = ifelse(IUCN.UT.5.sim == 1, 1, 0),
             other.chem.6 = ifelse(IUCN.UT.6.sim == 1|LEMIS.UT.6 == 1|CITES.UT.6 == 1|
                                   WiTIS.UT.6 == 1, 1, 0),
             fuels.7 = ifelse(IUCN.UT.7.sim == 1, 1, 0),
+            fibre.8 = ifelse(IUCN.UT.8.sim == 1|CITES.UT.8 == 1|LEMIS.UT.8 == 8, 1, 0),
+            construct.9 = ifelse(IUCN.UT.9.sim == 1, 1, 0),
             apparel.10 = ifelse(IUCN.UT.10.sim == 1|LEMIS.UT.10 == 1|
                                 CITES.UT.10 == 1, 1, 0),
             other.household.11 = ifelse(IUCN.UT.11.sim == 1|LEMIS.UT.11 == 1|
@@ -603,7 +607,7 @@ use.df <- use.raw.wiki %>%
                               SpUD.UT.15 == 1|LEMIS.UT.15 == 1|
                               CITES.UT.15 == 1, 1, 0),
             ex.situ.16 = ifelse(IUCN.UT.16.sim == 1, 1, 0),
-            other.16 = ifelse(IUCN.UT.17.sim == 1, 1, 0),
+            other.17 = ifelse(IUCN.UT.17.sim == 1, 1, 0),
             no.purpose = ifelse(IUCN.UT.1.sim == 1|IUCN.UT.2.sim == 1|IUCN.UT.3.sim == 1|
                                   IUCN.UT.4.sim  == 1|IUCN.UT.5.sim == 1|IUCN.UT.6.sim == 1|
                                   IUCN.UT.7.sim == 1|IUCN.UT.8.sim == 1|IUCN.UT.9.sim == 1|
@@ -626,7 +630,7 @@ use.df <- use.raw.wiki %>%
             use = use,
             used.no.purpose = ifelse(no.purpose == 1 & use == 1, 1, 0))
 
-colSums(use.df[,6:21])
+colSums(use.df[,6:25])
 
 ## add class
 mam.taxo <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.taxonomy.MAMMALIA.Oct25.csv"))
