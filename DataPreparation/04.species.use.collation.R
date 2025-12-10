@@ -5,60 +5,64 @@ data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al
 ## Explanation -----------------------------------------------------------------
 
 ## Data sources
-# 1. IUCN Use and Trade taxonomy
+# 1. IUCN Use and Trade taxonomy - 12,883 and 6977 records
 # Justification - clearly states what use is assigned to each species through the
 # July_2020_Guidance_General_Use_and_Trade_Classification_Scheme.
 
-# 2. IUCN Threat Classification table
+# 2. IUCN Threat Classification table - 2499 records
 # Justification - any species with BRU 5.1.1 (direct use) as a threat must 
 # be used in some form. Use not explicitly linked to any particular purpose.
 
-# 3. IUCN SpUD database
+# 3. IUCN SpUD database - 251 case studies
 # Justification - collates a range of examples of species use from published sources,
 # reports, grey literature etc. Details the type of use but not in the same
 # format as the IUCN Use and Trade taxonomy. Range of purposes recorded.
 
-# 4. Benítez-López et al., 2017 Science
+# 4. Benítez-López et al., 2017 Science - 2322 records
 # Justification - Comprehensive meta-analysis of studies assessing species hunted 
 # for consumption. Species included can all be deemed as used, and based on 
 # the search string and inclusion/exclusion criteria used for the analysis, can
 # be deemed as used for human consumption.
 
-# 5. Donald et al. 2024 Cons Bio
+# 5. Donald et al. 2024 Cons Bio - 4932 species
 # Justification - compiled CITES, LEMIS, TRAFFIC, Lit review & IUCN data (but 
 # not subsistence) to produce a list of "traded" species - specifically excluding
 # non commercial use. Does not provide purposes.
 
-# 6. WILDMEAT database
+# 6. WILDMEAT database - 182 species
 # Justification - comprehenisve review methodology of papers reporting the hunting 
 # and consumption of african forest species. Limited to consumptive use only
 # (commerical and subsistence).
 
-# 7. Morton et al., 2021 Nat Eco Evo
+# 7. Morton et al., 2021 Nat Eco Evo - 452 records
 # Justification - global review of studies assessing the impacts of trade. Documents
 # species end use to the level of pet, consumption or assorted
 
-# 8. Marshall et al. 2024/2025 Updated LEMIS database
+# 8. Marshall et al. 2024/2025 Updated LEMIS database - 2,772,700 records
 # Justification - one of the largest databases of traded species, does contain
 # purpose and type of species traded. Some of these codes can be combined to 
 # infer the end use, many cannot. Also contains records that will be removed 
 # (research, reintroduction trade etc.)
 
-# 9. CITES v2025.1 Updated CITES database
+# 9. CITES v2025.1 Updated CITES database - 3,903,157 records
 # Justification - one of the largest databases of traded species, does contain
 # purpose and type of species traded. Some of these codes can be combined to 
 # infer the end use, many cannot. Also contains records that will be removed 
 # (research, reintroduction trade etc.)
 
-# 10. WiTIS TRAFFIC Database July 2025 version
+# 10. WiTIS TRAFFIC Database July 2025 version - 19,424 records
 
-# 11. Wikipedia species accounts 
+# 11. Wikipedia species accounts - 10977 + 5858
 # Justification - one of the few if not the only open access resource that collates
 # general data around species. Data has full class coverage all detail varies 
 # greatly between species. Can be used to assess if species are used and if given
 # what the end purpose is.
 
+#12883 + 6977 + 2499 + 251 + 2322 +4932 + 182 + 452 + 2772700 + 3903157 + 19424 + 10977 + 5858
+# total records = 6,742,614
+
 ## Processing - 1. IUCN Use and Trade data ----------------------------------------
+# 12883 and 6977 records
 IUCN.AVES.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.Oct25.csv")) %>% select(-X)
 IUCN.MAM.use <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.use.MAMMALIA.Oct25.csv")) %>% select(-X)
 
@@ -75,13 +79,16 @@ IUCN.use.tidy <- IUCN.use.all %>%
          level = paste(international, national, subsistence, other, sep = ", "),
          level = gsub("NA, ", "", level),
          level = gsub(", NA", "", level), 
-         level = gsub("NA", "unknown", level))
+         level = gsub("NA", "use not recorded", level)) %>%
+  filter(level != "use not recorded")
 
-# 6335 species with a use per the IUCN U & T
+# 6295 species with a use per the IUCN U & T
 IUCN.use.sp <- IUCN.use.tidy %>%
   pivot_wider(id_cols = "IUCN.name", names_from = "code",
               values_from = "level") %>%
-  mutate(used.per.UT = 1)
+  mutate(
+    IUCN.UT.4 = NA_character_, #no sp used as poison
+    used.per.UT = 1)
 
 ## Processing - 2. IUCN Threat Classification table ----------------------------
 
@@ -449,9 +456,9 @@ use.raw <- use.raw %>%
                          CITES.UT.1 == 1|CITES.UT.3 == 1|CITES.UT.6 == 1|
                          WiTIS.UT.12 == 1|WiTIS.UT.3 == 1|WiTIS.UT.6 == 1,
                          1, 0))
-sum(use.raw$use) # 7941 (08/09/25) # 7928 (24/10/25)
-sum(use.raw$any.purpose) # 6723 (08/09/25) 6691 (24/10/25)
-use.raw %>% group_by(class) %>% summarise(sum(use)) # 5910 birds, 2018 mammals
+sum(use.raw$use) # 7941 (08/09/25) # 7928 (24/10/25) # 7915 (12/10/25)
+sum(use.raw$any.purpose) # 6723 (08/09/25) 6691 (24/10/25) # 6658 (12/10/25)
+use.raw %>% group_by(class) %>% summarise(sum(use)) # 5910 birds, 2005 mammals
 
 ## Processing - additional Wikipedia filter ------------------------------------
 
@@ -494,7 +501,7 @@ UT.10.flag <- use.raw %>% filter(IUCN.UT.10.sim == 0 & LEMIS.UT.1 == 0 &
 USE.flag <- use.raw %>% filter(use==0) %>%
   filter(IUCN.name %in% wiki.USE$IUCN.name)
 
-# manual review - 2085 species
+# manual review - 2089 species
 to.rev <- data.frame(IUCN.name = unique(c(UT.1.flag$IUCN.name, UT.13.flag$IUCN.name,
                               UT.15.flag$IUCN.name, UT.12.flag$IUCN.name,
                               UT.3.flag$IUCN.name, USE.flag$IUCN.name)))
@@ -502,7 +509,7 @@ to.rev <- data.frame(IUCN.name = unique(c(UT.1.flag$IUCN.name, UT.13.flag$IUCN.n
 to.rev.out <- wiki.uses.df %>% select(-text) %>% 
   filter(IUCN.name %in% to.rev$IUCN.name)
 
-to.rev.out %>% filter(!IUCN.name %in% wiki.uses$IUCN.name)
+#to.rev.out %>% filter(!IUCN.name %in% wiki.uses$IUCN.name)
 
 # to.rev.out <- to.rev.out %>% select(-det) %>%
 #   left_join(wiki.uses.df)
@@ -568,10 +575,10 @@ use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
                                 MAN.Wiki.UT.3 == 1 |MAN.Wiki.UT.10 == 1, 1, 0))
   
 
-sum(use.raw.wiki$use) # (08/09/25) 8797
-sum(use.raw.wiki$any.purpose) # (08/09/25) 6788
-use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6358, 2439
-write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.Oct25.csv"))
+sum(use.raw.wiki$use) # (08/09/25) 8797 # 8784 (10/12/25)
+sum(use.raw.wiki$any.purpose) # (08/09/25) 6788 # 6756 (12/10/25)
+use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6358, 2426
+write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.Dec25.csv"))
 
 
 ## Tidy up final dataset -------------------------------------------------------
@@ -593,7 +600,7 @@ use.df <- use.raw.wiki %>%
             fuels.7 = ifelse(IUCN.UT.7.sim == 1, 1, 0),
             fibre.8 = ifelse(IUCN.UT.8.sim == 1|CITES.UT.8 == 1|LEMIS.UT.8 == 8, 1, 0),
             construct.9 = ifelse(IUCN.UT.9.sim == 1, 1, 0),
-            apparel.10 = ifelse(IUCN.UT.10.sim == 1|LEMIS.UT.10 == 1|
+            apparel.10 = ifelse(IUCN.UT.10.sim == 1|LEMIS.UT.10 == 1|MAN.Wiki.UT.10 == 1|
                                 CITES.UT.10 == 1, 1, 0),
             other.household.11 = ifelse(IUCN.UT.11.sim == 1|LEMIS.UT.11 == 1|
                                         CITES.UT.11 == 1, 1, 0),
@@ -602,7 +609,7 @@ use.df <- use.raw.wiki %>%
                                     CITES.UT.12 == 1|WiTIS.UT.12 == 1, 1, 0),
             pets.13 = ifelse(IUCN.UT.13.sim == 1|MAN.Wiki.UT.13 == 1|SpUD.UT.13 == 1|
                                Mort.UT.13 == 1, 1, 0),
-            research.14 = ifelse(IUCN.UT.14.sim == 1, 1, 0),
+            research.14 = ifelse(IUCN.UT.14.sim == 1|LEMIS.UT.14 == 1, 1, 0),
             sport.15 = ifelse(IUCN.UT.15.sim == 1|MAN.Wiki.UT.15 == 1|
                               SpUD.UT.15 == 1|LEMIS.UT.15 == 1|
                               CITES.UT.15 == 1, 1, 0),
@@ -613,7 +620,8 @@ use.df <- use.raw.wiki %>%
                                   IUCN.UT.7.sim == 1|IUCN.UT.8.sim == 1|IUCN.UT.9.sim == 1|
                                   IUCN.UT.10.sim == 1|IUCN.UT.11.sim == 1|IUCN.UT.12.sim == 1|
                                   IUCN.UT.13.sim == 1|IUCN.UT.14.sim == 1|IUCN.UT.15.sim == 1|
-                                  IUCN.UT.16.sim == 1|IUCN.UT.17.sim == 1|IUCN.UT.18.sim == 1|
+                                  IUCN.UT.16.sim == 1|IUCN.UT.17.sim == 1|
+                                  #IUCN.UT.18.sim == 1| unknown use - so known to be used but not how so no purpose
                                   SpUD.UT.1 == 1|SpUD.UT.3 == 1|
                                   SpUD.UT.12 == 1|SpUD.UT.13 == 1|SpUD.UT.15 == 1|
                                   BenLop.UT.1 == 1|Mort.UT.1 == 1|Mort.UT.13 == 1|
@@ -641,7 +649,7 @@ class.df <- rbind(mam.taxo %>% select(IUCN.name) %>% mutate(Class = "Mammalia"),
 use.df <- use.df %>% 
   left_join(class.df)
 
-write.csv(use.df, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Oct25.csv"))
+write.csv(use.df, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Dec25.csv"))
 
 ## manual checking
 t <- use.raw.wiki %>% select(IUCN.name, use, contains("15")) %>%
