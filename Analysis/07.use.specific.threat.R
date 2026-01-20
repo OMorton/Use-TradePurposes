@@ -40,7 +40,13 @@ IUCN.use.tidy <- IUCN.use.all %>%
          level = paste(international, national, subsistence, other, sep = ", "),
          level = gsub("NA, ", "", level),
          level = gsub(", NA", "", level), 
-         level = gsub("NA", "unknown", level))
+         level = gsub("NA", "use level not recorded", level)) %>%
+  ## note Pallas cat is recorded as used for all uses so only keep those with a 
+  ## a level given. We dont do this for all species as a review of species 
+  ## highlights multiple species dont record the level but confirm the use in the text
+  filter(!c(IUCN.name == "Otocolobus manul" & level == "use level not recorded"))
+
+f <- IUCN.use.tidy %>% group_by(IUCN.name) %>% tally()
 
 single.use.sp <- IUCN.use.tidy %>% group_by(IUCN.name) %>% filter(n() == 1)
 multi.use.sp <- IUCN.use.tidy %>% group_by(IUCN.name) %>% filter(n() > 1)
@@ -87,7 +93,7 @@ IUCN.BRU.Thr <- IUCN.BRU.filt %>% filter(threat.score >= 6)
 # 1558 if we keep all threat scores, after removing LC and EX species (.
 IUCN.BRU.Thr <- IUCN.BRU.filt %>%
   #filter(threat.score >= 6) %>%
-  left_join(sp.status) %>% filter(!status %in% c("EX", "LC"))
+  left_join(sp.status) %>% filter(!status %in% c("EX", "EW", "LC"))
 
 ## Pathway 1 - if a species is likely threatened by use and only has 1 use 
 ## documented by the IUCN then we can reasonably assume that that must logically
@@ -249,9 +255,9 @@ sport.15 <- c("\\btrophy\\b",
               "exploitation(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+sport",
               "exploitation(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+trophies",
               "exploitation(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+recreation",
-              "exploitated(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+sport",
-              "exploitated(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+trophies",
-              "exploitated(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+recreation",
+              "exploited(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+sport",
+              "exploited(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+trophies",
+              "exploited(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+recreation",
               "hunting(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+sport",
               "hunting(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+trophies",
               "hunting(?:[^\\w\\.]+\\w+){0,2}[^\\w\\.]+recreation",
@@ -562,11 +568,11 @@ for (i in 1:nrow(IUCN.thr.text)) {
 }
 all.sp.use %>% select(IUCN.name, sentences) %>% distinct() %>%
   summarise(sum(sentences)) #184692 (39,015 for threatened sp)
-write.csv(all.sp.use, paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.Nov25.csv"))
+write.csv(all.sp.use, paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.classifier.out.Dec25.csv"))
 
 
 ## Test classifier -------------------------------------------------------------
-all.sp.use <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.Nov25.csv"))
+all.sp.use <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.classifier.out.Dec25.csv"))
 test.dat200 <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.final.testset.Oct25.LABELLED.csv"))
 
 test.dat200 <- test.dat200 %>% arrange(IUCN.name) %>%
@@ -613,12 +619,12 @@ performance.out.tidy <- performance.out %>%
   select(use, type, tally, kappa, acc, acc.nir, spec, sens, bal.acc)
 
 write.csv(performance.out.tidy, 
-          paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.final.testset.Oct25.PERFORMANCE.METRICS.Oct25.csv"))
+          paste0(data.path, "Outputs/threat.dataset/IUCN.BRU.Thr.multi.final.testset.PERFORMANCE.METRICS.Dec25.csv"))
 
 fit.use.i[fit.use.i$gen.mention != (select(test.dat200, paste0(i))[[1]]),]
 
-## Plotting --------------------------------------------------------------------
-all.sp.use <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.all.classified.Nov25.csv"))
+## Plotting Preparation ---------------------------------------------------------
+all.sp.use <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.use.thr.classifier.out.Dec25.csv"))
 
 # Tot 1558 sp.
 classif.single <- all.sp.use %>% filter(IUCN.name %in% IUCN.BRU.Thr.single$IUCN.name) #776 sp.
@@ -703,8 +709,10 @@ manual.threat.check <- rbind(classif.multi2, classif.single2, classif.none2) %>%
   filter(use.threat == "MANUAL")
 # f <- left_join(select(manual.threat.check, -use.threat), 
 #           select(manual.threat.check.in, IUCN.name, use.threat, multi.mention.verif, use))
-write.csv(manual.threat.check,
-          paste0(data.path, "Outputs/threat.dataset/IUCN.threat.classif.manual.OUT.csv"))
+
+ # write.csv(manual.threat.check,
+ #           paste0(data.path, "Outputs/threat.dataset/IUCN.threat.classif.manual.OUT.csv"))
+
 # 40 species
 manual.threat.check.in <- read.csv(paste0(data.path, 
                                           "Outputs/threat.dataset/IUCN.threat.classif.manual.IN.csv")) %>%
@@ -735,84 +743,11 @@ IUCN.use.tidy.bb <- IUCN.use.tidy %>% select(IUCN.name, code) %>%
          aesthetic = ifelse(!is.na(apparel), 1, aesthetic)) %>%
   pivot_longer(!IUCN.name, names_to = "use", values_to = "use.pres") %>%
   filter(use != "other.known", use.pres == 1)
+
 all.classify.out <- all.classify %>% left_join(IUCN.use.tidy.bb) %>%
   mutate(use.pres.found = ifelse(use.pres == 1 | use.found == 1, 1, NA))
 
+## write out the data here for further manual checks of all likely or unlikely species
 write.csv(all.classify.out,
           paste0(data.path, "Outputs/threat.dataset/IUCN.threat.all.classif.OUT.csv"))
 
-all.classify.in <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.threat.all.classif.IN.csv"))
-
-all.classify.tidy <- all.classify.in %>% 
-  mutate(use.pres.found.verif = ifelse(is.na(use.pres.found.verif), use.pres.found, use.pres.found.verif)) %>%
-  mutate(use.pres.found.verif = ifelse(is.na(use.pres.found.verif), 0, use.pres.found.verif),
-         use.threat.verif = ifelse(use.pres.found.verif == 0, NA, use.threat.verif)) %>%
-  left_join(sp.status)
-
-all.classify.tidy.na <- all.classify.tidy %>% filter(!is.na(use.threat.verif)) %>%
-  mutate(use.threat.verif = factor(use.threat.verif, 
-                                   levels = c("Unlikely", "Insufficient infomation",
-                                              "Potential", "Highly likely")),
-         use = case_when(use == "aesthetic" ~ "Ornamental",
-                         use == "apparel" ~ "Apparel",
-                         use == "food" ~ "Food",
-                         use == "medicine" ~ "Medicine",
-                         use == "pets" ~ "Pets",
-                         use == "sport" ~ "Sport"))
-
-all.classify.tidy.sum <- all.classify.tidy.na %>% 
-  group_by(Class, use, use.threat.verif) %>% tally() %>%
-  mutate(use.thr = paste0(use, ".", use.threat.verif)) %>%
-  group_by(Class, use) %>%
-  mutate(tot = sum(n),
-         perc = round((n/tot)*100, 1),
-         lab.perc = paste0(perc, "%"),
-         lab.y = n + (0.05*tot),
-         lab.use = paste0(use, " (n = ", tot, ")"))
-
-aves.use.threat <- ggplot(filter(all.classify.tidy.sum, Class == "Aves"), 
-       aes(x = use.threat.verif, y = n, fill = use.threat.verif)) +
-  geom_bar(stat="identity") +
-  facet_wrap(~lab.use, scale = "free_y") +
-  geom_text(aes(x = use.threat.verif, y = lab.y, label = lab.perc), 
-            size = 2.5) +
-  #coord_polar() +
-  scale_fill_manual(values = c("#4393c3", "grey", "#fddbc7", "#b2182b"),)+
-  ylab("Species") +
-  xlab("Negative impact of use") +
-  theme_minimal() +
-  theme(legend.title = element_blank(), legend.position = "bottom",
-        strip.text = element_text(face = "bold"), axis.text.x = element_blank())
- 
-mam.use.threat <- ggplot(filter(all.classify.tidy.sum, Class == "Mammalia"), 
-       aes(x = use.threat.verif, y = n, fill = use.threat.verif)) +
-  geom_bar(stat="identity") +
-  facet_wrap(~lab.use, scale = "free_y") +
-  geom_text(aes(x = use.threat.verif, y = lab.y, label = lab.perc), 
-            size = 2.5) +
-  #coord_polar() +
-  scale_fill_manual(values = c("#4393c3", "grey", "#fddbc7", "#b2182b"),)+
-  ylab("Species") +
-  xlab("Negative impact of use") +
-  theme_minimal() +
-  theme(legend.title = element_blank(), legend.position = "bottom",
-        strip.text = element_text(face = "bold"), axis.text.x = element_blank()) 
-
-empty <- ggplot() + theme_void()
-
-threat.arr <- ggarrange(aves.use.threat, empty, mam.use.threat, 
-                        ncol = 1, nrow = 3, heights = c(1, .1, 1),
-                      legend = "bottom", common.legend = T,
-                      labels = c("a","", "b"))
-
-threat.arr2 <-ggdraw(threat.arr) + 
-  draw_plot(threat.arr) +
-  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
-             x = .95, y = 0.95, width = 0.05, height = 0.05) +
-  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
-             x = .95, y = 0.47, width = 0.05, height = 0.05)
-
-ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.threat.Nov25.png",
-       threat.arr2, bg = "white",
-       device = "png", width = 20, height = 18, units = "cm")
