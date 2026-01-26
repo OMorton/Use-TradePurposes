@@ -6,7 +6,7 @@ source("functions.R")
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
 ## Read in use and IUCN data ---------------------------------------------------
-use.all <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Oct25.csv"))
+use.all <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Dec25.csv"))
 
 # IUCN data
 AVES.loc <- read.csv(paste0(data.path, "Data/IUCN/raw.iucn.location.Oct25.csv"))
@@ -142,8 +142,8 @@ use.full.clean <- use.all.mam %>% select(-dispersal_km, -biogeographical_realm) 
   filter(!if_any(everything(), is.na))
 
 ## remove species to be predicted
-known.all.mam <- use.full.clean %>% filter(used.no.purpose == 0) # 4796
-unknown.all.mam <- use.full.clean %>% filter(used.no.purpose == 1) # 584
+known.all.mam <- use.full.clean %>% filter(used.no.purpose == 0) # 4991
+unknown.all.mam <- use.full.clean %>% filter(used.no.purpose == 1) # 594
 write.csv(unknown.all.mam, paste0(data.path, "Outputs/RF/tuning/unknown.all.mam.v2.csv"))
 
 ## Check correlated variables
@@ -173,13 +173,13 @@ use.all.birds.full <- use.all.birds %>%
   left_join(habs)
 
 ## remove species to be predicted
-known.all.birds <- use.all.birds.full %>% filter(used.no.purpose == 0) # 9631
-unknown.all.birds <- use.all.birds.full %>% filter(used.no.purpose == 1) # 1390
+known.all.birds <- use.all.birds.full %>% filter(used.no.purpose == 0) # 9628
+unknown.all.birds <- use.all.birds.full %>% filter(used.no.purpose == 1) # 1393
 write.csv(unknown.all.birds, paste0(data.path, "Outputs/RF/tuning/unknown.all.birds.v2.csv"))
 
 ## check and drop NAs
 known.all.birds %>% summarise(across(everything(), ~ sum(is.na(.))))
-known.use.full.clean <- known.all.birds %>% filter(!if_any(everything(), is.na)) # 9320
+known.use.full.clean <- known.all.birds %>% filter(!if_any(everything(), is.na)) # 9312
 
 ## Check correlated variables
 check.corr <- known.use.full.clean %>% select(
@@ -298,7 +298,7 @@ for (i in use.ls) {
           summaryFunction = mySummary), 
         tuneGrid = expand.grid(mtry = c(1, 3,5, 10, 15, 20, 30, 40),
                                min.node.size = 5, splitrule = c("gini", "extratrees")),
-        importance = "impurity",
+        importance = "permutation",
         num.trees = ntree) 
       
       results <- fit$results %>%
@@ -311,7 +311,7 @@ for (i in use.ls) {
   write.csv(rf.all.i, paste0(data.path, "Outputs/RF/tuning/", i, "tuning.grid.csv"))
 }
 
-save(pred.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.tuning.data.oct25.rdata"))
+save(pred.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.tuning.data.Dec25.permutation.rdata"))
 
 ## Tuning use models - MAMMALIA ------------------------------------------------
 set.seed(212)
@@ -375,7 +375,7 @@ for (i in use.ls) {
         summaryFunction = mySummary), 
       tuneGrid = expand.grid(mtry = c(1, 3,5, 10, 15, 20),
                              min.node.size = 5, splitrule = c("gini", "extratrees")),
-      importance = "impurity",
+      importance = "permutation",
       num.trees = ntree) 
     
     results <- fit$results %>%
@@ -385,15 +385,15 @@ for (i in use.ls) {
   pred.out.ls[[paste0("train.", i)]] <- df.train 
   pred.out.ls[[paste0("test", i)]] <- df.test  
   pred.out.ls[[paste0("mod.results.", i)]] <- rf.all.i  
-  write.csv(rf.all.i, paste0(data.path, "Outputs/RF/tuning/", i, "tuning.grid.MAM.csv"))
+  write.csv(rf.all.i, paste0(data.path, "Outputs/RF/tuning/", i, "tuning.grid.MAM.permutation.csv"))
 }
 
-save(pred.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MAM.oct25.rdata"))
+save(pred.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MAM.Dec25.permutation.rdata"))
 
 ## Fitting final models - AVES -------------------------------------------------
 
 # read in test, train data and tuning grid
-load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.oct25.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.Dec25.permutation.rdata"))
 
 use.ls <- c("food.hum.1", "med.3", "apparel.10", "jewellery.12", "pets.13", "sport.15")
 stats.out.ls <- list()
@@ -453,9 +453,9 @@ for (i in use.ls) {
   
 }
 
-#save(stats.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.test.statistics.rdata"))
+save(stats.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.test.statistics.Dec25.permutation.rdata"))
 
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.Dec25.permutation.rdata"))
 names(stats.out.ls)
 # top 3 work beyond that so few use cases prediction fails
 stats.out.ls$optimized.matrix.pets.13
@@ -485,12 +485,12 @@ bird.sport.15.vi <- stats.out.ls$final.mod.sport.15 %>%
   vip::vi() %>% mutate(use = "sport.15")
 
 var.imp.birds <- rbind(bird.food.1.vi, bird.pets.13.vi, bird.sport.15.vi)
-save(var.imp.birds, file = paste0(data.path, "Outputs/RF/pdp/vi.all.birds.rdata"))
+save(var.imp.birds, file = paste0(data.path, "Outputs/RF/pdp/vi.all.birds.permutation.rdata"))
 
 ## Fitting final models - MAMMALIA ---------------------------------------------
 
 # read in test, train data and tuning grid
-load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MAM.oct25.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MAM.Dec25.permutation.rdata"))
 
 use.ls <- c("food.hum.1", "med.3", "apparel.10", "jewellery.12", "pets.13", "sport.15")
 stats.out.ls <- list()
@@ -520,7 +520,7 @@ for (i in use.ls) {
       summaryFunction = mySummary), 
     tuneGrid = expand.grid(mtry = opt.i$mtry,
                            min.node.size = 5, splitrule = opt.i$splitrule),
-    importance = "impurity",
+    importance = "permutation",
     num.trees = opt.i$ntree)
   
   # optimize the probability threshold
@@ -553,9 +553,9 @@ for (i in use.ls) {
   
 }
 
-#save(stats.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.oct25.rdata"))
+#save(stats.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.Dec25.permutation.rdata"))
 
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.oct25.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.Dec25.permutation.rdata"))
 names(stats.out.ls)
 # top 3 work beyond that so few use cases prediction fails
 stats.out.ls$optimized.matrix.pets.13
@@ -593,14 +593,14 @@ mam.medicine.3.vi <- stats.out.ls$final.mod.med.3 %>%
 
 var.imp.mam <- rbind(mam.food.1.vi, mam.sport.15.vi, mam.apparel.10.vi,
                      mam.pets.13.vi, mam.medicine.3.vi)
-save(var.imp.mam, file = paste0(data.path, "Outputs/RF/pdp/vi.all.mam.rdata"))
+save(var.imp.mam, file = paste0(data.path, "Outputs/RF/pdp/vi.all.mam.Dec25.permutation.rdata"))
 
 
 
 ## Collating model summary -----------------------------------------------------
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.Dec25.permutation.rdata"))
 aves.fit.out <- stats.out.ls
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.oct25.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.Dec25.permutation.rdata"))
 mam.fit.out <- stats.out.ls
 
 use.ls <- c("food.hum.1", "med.3", "apparel.10", "jewellery.12", "pets.13", "sport.15")
@@ -646,17 +646,17 @@ for (i in use.ls) {
 }
 
 write.csv(mam.all.fit.stats, 
-          paste0(data.path, "Outputs/RF/tuning/summary.test.statistics.MAM.oct25.csv"))
+          paste0(data.path, "Outputs/RF/tuning/summary.test.statistics.MAM.Dec25.permutation.csv"))
 write.csv(aves.all.fit.stats, 
-          paste0(data.path, "Outputs/RF/tuning/summary.test.statistics.AVES.oct25.csv"))
+          paste0(data.path, "Outputs/RF/tuning/summary.test.statistics.AVES.Dec25.permutation.csv"))
 
 ## Get partial effects plots - AVES --------------------------------------------
 
 library(DALEX)
 library(DALEXtra)
 
-load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.oct25.rdata"))
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.Dec25.permutation.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.Dec25.permutation.rdata"))
 
 uses <- c("food.hum.1", "pets.13", "sport.15")
 pdp.df.list<- list()
@@ -704,161 +704,21 @@ for (i in uses) {
   
 }
  
-save(pdp.df.list, file = paste0(data.path, "Outputs/RF/pdp/pdp.all.birds.oct25.rdata"))
-
-## Plots - AVES -----------------------------------------------------------------------
+save(pdp.df.list, file = paste0(data.path, "Outputs/RF/pdp/pdp.all.birds.Dec25.permutation.rdata"))
 
 
-load(paste0(data.path, "Outputs/RF/pdp/pdp.all.birds.oct25.rdata"))
-load(paste0(data.path, "Outputs/RF/pdp/vi.all.birds.rdata"))
 
-var.imp.birds %>% distinct(Variable) %>% 
-  mutate(clean.var = gsub("1", "", Variable),
-         clean.var = str_to_title(clean.var)) %>%
-  write.csv(paste0(data.path, "Outputs/RF/pdp/birds.var.names.out.csv"))
-
-clean.vars <- read.csv(paste0(data.path, "Outputs/RF/pdp/birds.var.names.in.csv"))
-
-
-uses <- c("food.hum.1", "pets.13", "sport.15")
-use.label <- c("Food - human", "Pets", "Sport")
-vars <- unique(clean.vars$model.var)
-i <- 2
-j <- "Primary.Lifestyle"
-j <- "Trophic.Level"
-vi.plt.ls <- list()
-
-for (i in 1:3) {
-  use.i <- uses[i]
-  use.lab.i <- use.label[i]
-  vi.i <- var.imp.birds %>% filter(use == use.i) %>%
-    slice_head(n = 12) %>%
-    left_join(clean.vars, by = c("Variable" = "pdp.var"))
-  
-  vi.plt <- ggplot(vi.i, aes(Importance, reorder(clean.var, Importance),
-                             fill = type)) + 
-    geom_col() +
-    scale_fill_manual(values = c("grey20", "#9e9ac8")) +
-    ylab("Variable") +
-    xlab(paste0("Importance \n (", use.lab.i, ")")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-
-  vi.plt.ls[[paste0(use.i, ".vi.plt")]] <- vi.plt
-  
-  cat.pdp.i <- pdp.df.list[[paste0("cat.aggr.profs.", use.i)]]
-  num.pdp.i <- pdp.df.list[[paste0("num.aggr.profs.", use.i)]]
-  pdp.raw.i <- pdp.df.list[[paste0("cp.profs.", use.i)]]
-  
-  for (j in vars) {
-    
-    names.j <- filter(clean.vars, model.var ==j)
-    
-    ## Plotting for cat vars
-    if (all(names.j$cat.var) == 1){
-      ave.pdp.j <- filter(cat.pdp.i, Variable == unique(names.j$model.var)) %>%
-        left_join(distinct(clean.vars, model.var, cat.var, type),
-                  by = c("Variable" = "model.var"))
-      raw.pdp.j <- filter(pdp.raw.i, Variable == unique(names.j$model.var)) %>%
-        rename("X" = all_of(j)) %>%
-        left_join(distinct(clean.vars, model.var, cat.var, type),
-                  by = c("Variable" = "model.var"))
-     
-      var.col <- "#9e9ac8"
-      if (all(names.j$type != "Intrinsic")) {
-        var.col <- "grey20"
-      } 
-      
-      
-      pdp.plt <- ggplot(ave.pdp.j, aes(X, Y)) +
-        geom_violin(data = raw.pdp.j, aes(), fill = "grey90", colour = var.col, alpha = .3) +
-        geom_point(colour = var.col, size = 5, shape = 18) +
-        #scale_x_log10() + 
-        xlab(paste0(unique(names.j$clean.var))) +
-        ylab("Probability") +
-        theme_minimal()
-      
-    ## plotting for num vars
-    } else {
-      ave.pdp.j <- filter(num.pdp.i, Variable == names.j$model.var) %>%
-        left_join(clean.vars, by = c("Variable" = "model.var"))
-      raw.pdp.j <- filter(pdp.raw.i, Variable == names.j$model.var) %>%
-        rename("X" = all_of(j)) %>%
-        left_join(clean.vars, by = c("Variable" = "model.var"))
-      
-      var.col <- "#9e9ac8"
-      if (all(names.j$type != "Intrinsic")) {
-        var.col <- "grey20"
-      } 
-      
-      if (any(j %in% c("Mass"))){
-        ave.pdp.j$X <- ave.pdp.j$X/1000
-        raw.pdp.j$X <- raw.pdp.j$X/1000}
-      
-      if (any(j %in% c("Range.Size"))){
-        ave.pdp.j$X <- ave.pdp.j$X/1000
-        raw.pdp.j$X <- raw.pdp.j$X/1000}
-      
-      pdp.plt <- ggplot(ave.pdp.j, aes(X, Y)) +
-        geom_line(data = raw.pdp.j, aes(, group = `X_ids_`), colour = "grey", alpha = .1) +
-        geom_line(colour = var.col, linewidth = 1) +
-        #scale_x_log10() + 
-        xlab(paste0(unique(ave.pdp.j$clean.var))) +
-        ylab("Probability") +
-        coord_cartesian(xlim = c(min(ave.pdp.j$X), max(ave.pdp.j$X)), expand = F)+
-        theme_minimal()
-    }
-  
-      vi.plt.ls[[paste0(use.i, ".", j, ".plt")]] <- pdp.plt
-  }
-}
-
-
-library(ggpubr)
-library(cowplot)
-options( scipen = 999)
-vi.arr <- ggarrange(vi.plt.ls$food.hum.1.vi.plt, 
-                    vi.plt.ls$food.hum.1.PASSERIFORMES.plt,
-                    vi.plt.ls$food.hum.1.GALLIFORMES.plt,
-                    vi.plt.ls$food.hum.1.Palearctic.plt,
-          vi.plt.ls$pets.13.vi.plt, 
-          vi.plt.ls$pets.13.Range.Size.plt + scale_x_log10(),
-          vi.plt.ls$pets.13.Beak.Depth.plt + scale_x_log10(),
-          vi.plt.ls$pets.13.Trophic.Level.plt +
-            scale_x_discrete(labels = c("Carn", "Herb", "Omni", "Scav"),
-                             breaks = c("Carnivore", "Herbivore", "Omnivore", "Scavenger")),
-          vi.plt.ls$sport.15.vi.plt, 
-          vi.plt.ls$sport.15.Range.Size.plt + scale_x_log10(), 
-          vi.plt.ls$sport.15.Centroid.Latitude.plt, 
-          vi.plt.ls$sport.15.Mass.plt + scale_x_log10(),
-          ncol = 4, nrow = 3, 
-          labels = c("a", "", "", "",
-                     "b", "", "", "",
-                     "c", "", "", ""), 
-          widths = c(1.3, 1, 1, 1))
-
-vi.arr2 <- ggdraw(vi.arr) +
-  draw_plot(vi.arr) +
-  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
-             x = 0.93, y = 0.93, width = 0.07, height = 0.07)
-
-ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "aves.vi.plt.v3.png",
-       vi.arr2, bg = "white",
-       device = "png", width = 27, height = 23, units = "cm")
 
 ## Get partial effects plots - MAMMALIA --------------------------------------------
 
 library(DALEX)
 library(DALEXtra)
 
-load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MAM.oct25.rdata"))
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.oct25.rdata"))
-load(paste0(data.path, "Outputs/RF/pdp/vi.all.mam.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MAM.Dec25.permutation.rdata"))
+load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.Dec25.permutation.rdata"))
+load(paste0(data.path, "Outputs/RF/pdp/vi.all.mam.Dec25.permutation.rdata"))
 
-
-
-uses <- c("food.hum.1", "sport.15", "med.3", "apparel.10")
+uses <- c("food.hum.1", "sport.15", "med.3", "apparel.10", "pets.13")
 pdp.df.list<- list()
 i <- "food.hum.1"
 
@@ -902,265 +762,5 @@ for (i in uses) {
   pdp.df.list[[paste0("num.aggr.profs.",i)]] <- num.aggr.profs
   pdp.df.list[[paste0("cat.aggr.profs.",i)]] <- cat.aggr.profs}
 
-save(pdp.df.list, file = paste0(data.path, "Outputs/RF/pdp/pdp.all.mam.oct25.rdata"))
+save(pdp.df.list, file = paste0(data.path, "Outputs/RF/pdp/pdp.all.mam.Dec25.permutation.rdata"))
 
-## Plots - MAMMALIA ------------------------------------------------------------
-load(paste0(data.path, "Outputs/RF/pdp/pdp.all.mam.oct25.rdata"))
-load(paste0(data.path, "Outputs/RF/pdp/vi.all.mam.rdata"))
-names(pdp.df.list)
-var.imp.mam %>% distinct(Variable) %>% 
-  mutate(clean.var = gsub("1", "", Variable),
-         clean.var = str_to_title(clean.var)) %>%
-  write.csv(paste0(data.path, "Outputs/RF/pdp/mam.var.names.out.csv"))
-
-clean.vars <- read.csv(paste0(data.path, "Outputs/RF/pdp/mam.var.names.in.csv"))
-vars <- unique(clean.vars$model.var)
-
-
-uses <- c("food.hum.1", "sport.15", "med.3", "apparel.10")
-use.label <- c("Food - human", "Sport", "Medicinal", "Apparel")
-i <- 1
-j <- "adult_mass_g"
-
-mam.vi.plt.ls <- list()
-var.imp.mam <- var.imp.mam %>% mutate(use = ifelse(use == "medicine.3", "med.3", use))
-
-for (i in 1:4) {
-  use.i <- uses[i]
-  use.lab.i <- use.label[i]
-  vi.i <- var.imp.mam %>% filter(use == use.i) %>%
-    slice_head(n = 12) %>%
-    left_join(clean.vars, by = c("Variable" = "pdp.var"))
-  
-  vi.plt <- ggplot(vi.i, aes(Importance, reorder(clean.var, Importance),
-                             fill = type)) + 
-    geom_col() +
-    scale_fill_manual(values = c("grey20", "#d8b365")) +
-    ylab("Variable") +
-    xlab(paste0("Importance \n (", use.lab.i, ")")) +
-    theme_minimal() +
-    theme(legend.position = "none")
-  
-  cat.pdp.i <- pdp.df.list[[paste0("cat.aggr.profs.", use.i)]]
-  num.pdp.i <- pdp.df.list[[paste0("num.aggr.profs.", use.i)]]
-  pdp.raw.i <- pdp.df.list[[paste0("cp.profs.", use.i)]]
-  
-  mam.vi.plt.ls[[paste0(use.i, ".vi.plt")]] <- vi.plt
-  
-  for (j in vars) {
-    names.j <- filter(clean.vars, model.var ==j)
-    
-    ## Plotting for cat vars
-    if (all(names.j$cat.var) == 1){
-      ave.pdp.j <- filter(cat.pdp.i, Variable == unique(names.j$model.var)) %>%
-        left_join(distinct(clean.vars, model.var, cat.var, type),
-                  by = c("Variable" = "model.var"))
-      raw.pdp.j <- filter(pdp.raw.i, Variable == unique(names.j$model.var)) %>%
-        rename("X" = all_of(j)) %>%
-        left_join(distinct(clean.vars, model.var, cat.var, type),
-                  by = c("Variable" = "model.var"))
-
-      
-      var.col <- "#d8b365"
-      if (all(names.j$type != "Intrinsic")) {
-        var.col <- "grey20"
-      } 
-      
-      pdp.plt <- ggplot(ave.pdp.j, aes(X, Y)) +
-        geom_violin(data = raw.pdp.j, aes(), fill = "grey90", colour = var.col, alpha = .3) +
-        geom_point(colour = var.col, size = 5, shape = 18) +
-        #scale_x_log10() + 
-        xlab(paste0(unique(names.j$clean.var))) +
-        ylab("Probability") +
-        theme_minimal()
-      
-      ## plotting for num vars
-    } else {
-      ave.pdp.j <- filter(num.pdp.i, Variable == names.j$model.var) %>%
-        left_join(clean.vars, by = c("Variable" = "model.var"))
-      raw.pdp.j <- filter(pdp.raw.i, Variable == names.j$model.var) %>%
-        rename("X" = all_of(j)) %>%
-        left_join(clean.vars, by = c("Variable" = "model.var"))
-      
-      var.col <- "#d8b365"
-      if (all(names.j$type != "Intrinsic")) {
-        var.col <- "grey20"
-      } 
-      
-      
-      if (any(j %in% c("adult_mass_g"))){
-        ave.pdp.j$X <- ave.pdp.j$X/1000
-        raw.pdp.j$X <- raw.pdp.j$X/1000}
-      
-      if (any(j %in% c( "Range.Size"))){
-        ave.pdp.j$X <- ave.pdp.j$X/1000000000
-        raw.pdp.j$X <- raw.pdp.j$X/1000000000}
-      
-      pdp.plt <- ggplot(ave.pdp.j, aes(X, Y)) +
-        geom_line(data = raw.pdp.j, aes(, group = `X_ids_`), colour = "grey", alpha = .1) +
-        geom_line(colour = var.col, linewidth = 1) +
-        #scale_x_log10() + 
-        xlab(paste0(unique(ave.pdp.j$clean.var))) +
-        ylab("Probability") +
-        coord_cartesian(xlim = c(min(ave.pdp.j$X), max(ave.pdp.j$X)), expand = F)+
-        theme_minimal()
-    }
-    
-    mam.vi.plt.ls[[paste0(use.i, ".", j, ".plt")]] <- pdp.plt
-    
-    
-  }
-}
-
-
-library(ggpubr)
-library(cowplot)
-options( scipen = 999)
-mam.vi.arr <- ggarrange(mam.vi.plt.ls$food.hum.1.vi.plt, 
-                        mam.vi.plt.ls$food.hum.1.adult_mass_g.plt + scale_x_log10(),
-                        mam.vi.plt.ls$food.hum.1.max_longevity_d.plt,
-                    mam.vi.plt.ls$food.hum.1.litter_size_n.plt + scale_x_log10(), 
-                    mam.vi.plt.ls$sport.15.vi.plt, 
-                    mam.vi.plt.ls$sport.15.adult_mass_g.plt + scale_x_log10(), 
-                    mam.vi.plt.ls$sport.15.Range.Size.plt + scale_x_log10(),
-                    mam.vi.plt.ls$sport.15.max_longevity_d.plt + scale_x_log10(),
-                    mam.vi.plt.ls$apparel.10.vi.plt,
-                    mam.vi.plt.ls$apparel.10.adult_mass_g.plt + scale_x_log10(),
-                    mam.vi.plt.ls$apparel.10.Range.Size.plt + scale_x_log10(),
-                    mam.vi.plt.ls$apparel.10.Centroid.Latitude.plt,
-                    ncol = 4, nrow = 3, 
-                    labels = c("a", "", "", "",
-                               "b", "", "", "",
-                               "c", "", "", ""), 
-                    widths = c(1.3, 1, 1, 1))
-
-mam.vi.arr2 <- ggdraw(mam.vi.arr) +
-  draw_plot(mam.vi.arr) +
-  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
-             x = 0.93, y = 0.93, width = 0.07, height = 0.07)
-
-ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.vi.plt.v3.png",
-       mam.vi.arr2, bg = "white",
-       device = "png", width = 27, height = 23, units = "cm")
-
-## Predicting for unknown uses -------------------------------------------------
-
-unknown.aves <- read.csv(paste0(data.path, "Outputs/RF/tuning/unknown.all.birds.v2.csv"))
-unknown.aves <- unknown.aves %>% mutate(rel.beak = Beak.Length_Culmen/Mass,
-                                        rel.tail = Tail.Length/Mass) %>%
-  mutate(Order = 1) %>%
-  pivot_wider(names_from = orderName, values_from = Order, values_fill = 0) %>%
-  mutate(CICONIIFORMES = 0, MUSOPHAGIFORMES = 0,
-         Palearctic = as.factor(Palearctic),
-         Neotropical = as.factor(Neotropical),
-         Antarctic = as.factor(Antarctic),
-         Australasian = as.factor(Australasian),
-         Indomalayan = as.factor(Indomalayan),
-         Afrotropical = as.factor(Afrotropical),
-         Oceanian = as.factor(Oceanian),
-         Nearctic = as.factor(Nearctic)) %>% filter(!if_any(everything(), is.na))
-
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.rdata"))
-aves.mod.out <- stats.out.ls
-
-aves.food <- predict(aves.mod.out$final.mod.food.hum.1, unknown.aves, type = "prob") %>% 
-  summarise(pred =as.factor(ifelse(yes >= aves.mod.out$opt.threshold.food.hum.1, "yes", "no")))
-
-aves.pet <- predict(aves.mod.out$final.mod.pets.13, unknown.aves, type = "prob") %>% 
-  summarise(pred =as.factor(ifelse(yes >= aves.mod.out$opt.threshold.pets.13, "yes", "no")))
-
-aves.sport <- predict(aves.mod.out$final.mod.sport.15, unknown.aves, type = "prob") %>% 
-  summarise(pred =as.factor(ifelse(yes >= aves.mod.out$opt.threshold.sport.15, "yes", "no")))
-
-unknown.preds.aves <- data.frame(IUCN.name = unknown.aves$IUCN.name, status = unknown.aves$status,
-                                 food.1 = aves.food$pred, pets.13 = aves.pet$pred,
-                                 sport.15 = aves.sport$pred) %>%
-  pivot_longer(!c(IUCN.name, status), names_to = "use", values_to = "value") %>%
-  mutate(value = ifelse(value == "yes", 1, 0),
-         status = factor(status, levels = c("EW", "CR", "EN", "VU", "NT", "LC", "DD")))
-
-unknown.mam <- read.csv(paste0(data.path, "Outputs/RF/tuning/unknown.all.mam.v2.csv"))
-unknown.mam <- unknown.mam %>% filter(!if_any(everything(), is.na)) %>%
-  mutate(Order = 1) %>%
-  pivot_wider(names_from = orderName, values_from = Order, values_fill = 0) %>%
-  mutate(CINGULATA = 0,
-         Palearctic = as.factor(Palearctic),
-         Neotropical = as.factor(Neotropical),
-         Antarctic = as.factor(Antarctic),
-         Australasian = as.factor(Australasian),
-         Indomalayan = as.factor(Indomalayan),
-         Afrotropical = as.factor(Afrotropical),
-         Oceanian = as.factor(Oceanian),
-         Nearctic = as.factor(Nearctic))
-
-load(paste0(data.path, "Outputs/RF/tuning/all.test.statistics.MAM.rdata"))
-mam.mod.out <- stats.out.ls
-
-mam.food <- predict(mam.mod.out$final.mod.food.hum.1, unknown.mam, type = "prob") %>% 
-  summarise(pred =as.factor(ifelse(yes >= mam.mod.out$opt.threshold.food.hum.1, "yes", "no")))
-
-mam.sport <- predict(mam.mod.out$final.mod.sport.15, unknown.mam, type = "prob") %>% 
-  summarise(pred =as.factor(ifelse(yes >= mam.mod.out$opt.threshold.sport.15, "yes", "no")))
-
-mam.apparel <- predict(mam.mod.out$final.mod.apparel.10, unknown.mam, type = "prob") %>% 
-  summarise(pred =as.factor(ifelse(yes >= mam.mod.out$opt.threshold.apparel.10, "yes", "no")))
-
-mam.pets <- predict(mam.mod.out$final.mod.pets.13, unknown.mam, type = "prob") %>% 
-  summarise(pred =as.factor(ifelse(yes >= mam.mod.out$opt.threshold.pets.13, "yes", "no")))
-
-unknown.preds.mam <- data.frame(IUCN.name = unknown.mam$IUCN.name, status = unknown.mam$status,
-                                 food.1 = mam.food$pred, pets.13 = mam.pets$pred,
-                                 sport.15 = mam.sport$pred, apparel.10 = mam.apparel$pred) %>%
-  pivot_longer(!c(IUCN.name, status), names_to = "use", values_to = "value") %>%
-  mutate(value = ifelse(value == "yes", 1, 0),
-         status = factor(status, levels = c("EW", "CR", "EN", "VU", "NT", "LC", "DD")))
-
-# 467
-unknown.preds.mam %>% group_by(IUCN.name) %>% filter(all(value == 0)) %>%
-  summarise(length(unique(IUCN.name)))
-length(unique(unknown.preds.mam$IUCN.name)) #571
-
-mam.preds <- ggplot(unknown.preds.mam, aes(use, value, fill = status)) + 
-  geom_col() +
-  scale_fill_manual(values = c("#67001f", "#d6604d", "#fddbc7", "#92c5de", "#2166ac", "grey15")) +
-  xlab("Use and purpose") +
-  ylab("Species") +
-  scale_x_discrete(limits = c("food.1", "apparel.10", "pets.13", "sport.15"),
-                   labels = c("Food", "Apparel", "Pets", "Sport")) +
-  theme_minimal() +
-  theme(legend.position = "none")
-
-# 741
-unknown.preds.aves %>% group_by(IUCN.name) %>% filter(all(value == 0)) %>%
-  summarise(length(unique(IUCN.name)))
-length(unique(unknown.preds.aves$IUCN.name)) #1342
-
-aves.preds <- ggplot(unknown.preds.aves, aes(use, value, fill = status)) + 
-  geom_col() +
-  scale_fill_manual(values = c("#67001f", "#d6604d", "#fddbc7", "#92c5de", "#2166ac", "grey15")) +
-  xlab("Use and purpose") +
-  ylab("Species") +
-  scale_x_discrete(limits = c("pets.13", "food.1", "sport.15"),
-                   labels = c("Pets", "Food", "Sport")) +
-  theme_minimal() +
-  theme(legend.position = "none")
-
-pred.count.aves <- unknown.preds.aves %>% group_by(IUCN.name, status) %>% summarise(use.pred = ifelse(all(value == 0), 0, 1))
-unknown.preds.mam %>% group_by(IUCN.name, status) %>% summarise(use.pred = ifelse(all(value == 0), 0, 1))
-
-library(ggpubr)
-library(cowplot)
-pred.arr <- ggarrange(aves.preds, mam.preds, nrow =1, labels = c("a", "b"))
-
-pred.plt2 <- ggdraw(pred.arr) +
-  draw_plot(pred.arr) +
-  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
-             x = 0.4, y = 0.9, width = 0.1, height = 0.1) +
-  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
-             x = 0.9, y = 0.9, width = 0.1, height = 0.1)
-
-ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.preds.bar.v1.png",
-       pred.plt2, bg = "white",
-       device = "png", width = 20, height = 12, units = "cm")
