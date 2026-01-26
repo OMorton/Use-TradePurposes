@@ -79,8 +79,11 @@ IUCN.use.tidy <- IUCN.use.all %>%
          level = paste(international, national, subsistence, other, sep = ", "),
          level = gsub("NA, ", "", level),
          level = gsub(", NA", "", level), 
-         level = gsub("NA", "use not recorded", level)) %>%
-  filter(level != "use not recorded")
+         level = gsub("NA", "use level not recorded", level)) %>%
+  ## note Pallas cat is recorded as used for all uses so only keep those with a 
+  ## a level given. We dont do this for all species as a review of species 
+  ## highlights multiple species dont record the level but confirm the use in the text
+  filter(!c(IUCN.name == "Otocolobus manul" & level == "use level not recorded"))
 
 # 6295 species with a use per the IUCN U & T
 IUCN.use.sp <- IUCN.use.tidy %>%
@@ -456,9 +459,9 @@ use.raw <- use.raw %>%
                          CITES.UT.1 == 1|CITES.UT.3 == 1|CITES.UT.6 == 1|
                          WiTIS.UT.12 == 1|WiTIS.UT.3 == 1|WiTIS.UT.6 == 1,
                          1, 0))
-sum(use.raw$use) # 7941 (08/09/25) # 7928 (24/10/25) # 7915 (12/10/25)
-sum(use.raw$any.purpose) # 6723 (08/09/25) 6691 (24/10/25) # 6658 (12/10/25)
-use.raw %>% group_by(class) %>% summarise(sum(use)) # 5910 birds, 2005 mammals
+sum(use.raw$use) # 7941 (08/09/25) # 7928 (24/10/25) # 7928 (12/10/25)
+sum(use.raw$any.purpose) # 6723 (08/09/25) 6691 (24/10/25) # 6691 (12/10/25)
+use.raw %>% group_by(class) %>% summarise(sum(use)) # 5910 birds, 2018 mammals
 
 ## Processing - additional Wikipedia filter ------------------------------------
 
@@ -575,9 +578,9 @@ use.raw.wiki <- use.raw %>% left_join(wiki.uses) %>%
                                 MAN.Wiki.UT.3 == 1 |MAN.Wiki.UT.10 == 1, 1, 0))
   
 
-sum(use.raw.wiki$use) # (08/09/25) 8797 # 8784 (10/12/25)
-sum(use.raw.wiki$any.purpose) # (08/09/25) 6788 # 6756 (12/10/25)
-use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6358, 2426
+sum(use.raw.wiki$use) # (08/09/25) 8797 # 8797 (10/12/25)
+sum(use.raw.wiki$any.purpose) # (08/09/25) 6788 # 6788 (12/10/25)
+use.raw.wiki %>% group_by(class) %>% summarise(sum(use)) # 6358, 2439
 write.csv(use.raw.wiki, paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.Dec25.csv"))
 
 
@@ -632,6 +635,7 @@ use.df <- use.raw.wiki %>%
                                   CITES.UT.8 == 1|CITES.UT.11 == 1|CITES.UT.10 == 1|
                                   CITES.UT.1 == 1|CITES.UT.3 == 1|CITES.UT.6 == 1|
                                   WiTIS.UT.12 == 1|WiTIS.UT.3 == 1|WiTIS.UT.6 == 1|
+                                  WiTIS.UT.1|
                                   MAN.Wiki.UT.1 == 1 |MAN.Wiki.UT.13 == 1 |
                                   MAN.Wiki.UT.15 == 1 |MAN.Wiki.UT.12 == 1 |
                                   MAN.Wiki.UT.3 == 1 |MAN.Wiki.UT.10 == 1, 0, 1),
@@ -656,3 +660,261 @@ t <- use.raw.wiki %>% select(IUCN.name, use, contains("15")) %>%
   filter(SpUD.UT.15 == 1 |LEMIS.UT.15 == 1 | CITES.UT.15 == 1 | LEMIS.UT.15  == 1 |
            IUCN.UT.15.sim == 1 | MAN.Wiki.UT.15 == 1 )
 colSums(t[,4:8])
+
+## Tidy up source summary ------------------------------------------------------
+
+use.raw.wiki <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.Dec25.csv"))
+
+UT <- use.raw.wiki %>% select(IUCN.name, matches("IUCN\\.UT.*sim"), used.per.UT) %>%
+  summarise(data = "IUCN UT",
+            UT.1 = sum(IUCN.UT.1.sim),
+            UT.2 = sum(IUCN.UT.2.sim),
+            UT.3 = sum(IUCN.UT.3.sim),
+            UT.4 = sum(IUCN.UT.4.sim),
+            UT.5 = sum(IUCN.UT.5.sim),
+            UT.6 = sum(IUCN.UT.6.sim),
+            UT.7 = sum(IUCN.UT.7.sim),
+            UT.8 = sum(IUCN.UT.8.sim),
+            UT.9 = sum(IUCN.UT.9.sim),
+            UT.10 = sum(IUCN.UT.10.sim),
+            UT.11 = sum(IUCN.UT.11.sim),
+            UT.12 = sum(IUCN.UT.12.sim),
+            UT.13 = sum(IUCN.UT.13.sim),
+            UT.14 = sum(IUCN.UT.14.sim),
+            UT.15 = sum(IUCN.UT.15.sim),
+            UT.16 = sum(IUCN.UT.16.sim),
+            UT.17 = sum(IUCN.UT.17.sim),
+            UT.18 = sum(IUCN.UT.18.sim),
+            total = sum(used.per.UT))
+
+BRU <- use.raw.wiki %>% select(IUCN.name, used.per.BRU) %>%
+  summarise(data = "IUCN BRU",
+            UT.1 = NA,
+            UT.2 = NA,
+            UT.3 = NA,
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = NA,
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = NA,
+            UT.11 = NA,
+            UT.12 = NA,
+            UT.13 = NA,
+            UT.14 = NA,
+            UT.15 = NA,
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.BRU))
+
+SpUD <- use.raw.wiki %>% select(IUCN.name, matches("spud\\.ut", ignore.case = TRUE),
+                                     -matches("year", ignore.case = TRUE), used.per.SpUD) %>%
+  summarise(data = "IUCN SpUD",
+            UT.1 = sum(SpUD.UT.1),
+            UT.2 = NA,
+            UT.3 = sum(SpUD.UT.3),
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = NA,
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = NA,
+            UT.11 = NA,
+            UT.12 = sum(SpUD.UT.12),
+            UT.13 = sum(SpUD.UT.13),
+            UT.14 = NA,
+            UT.15 = sum(SpUD.UT.15),
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.SpUD))
+
+BenLop <- use.raw.wiki %>% select(IUCN.name, matches("benlop\\.ut", ignore.case = TRUE),
+                                       -matches("year", ignore.case = TRUE), used.per.BenLop) %>%
+  summarise(data = "Benitez-Lopez et al.,",
+            UT.1 = sum(BenLop.UT.1),
+            UT.2 = NA,
+            UT.3 = NA,
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = NA,
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = NA,
+            UT.11 = NA,
+            UT.12 = NA,
+            UT.13 = NA,
+            UT.14 = NA,
+            UT.15 = NA,
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.BenLop))
+
+Don <- use.raw.wiki %>% select(IUCN.name, used.per.Don)%>%
+  summarise(data = "Donald et al.,",
+            UT.1 = NA,
+            UT.2 = NA,
+            UT.3 = NA,
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = NA,
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = NA,
+            UT.11 = NA,
+            UT.12 = NA,
+            UT.13 = NA,
+            UT.14 = NA,
+            UT.15 = NA,
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.Don))
+
+WILDMEAT <- use.raw.wiki %>% select(IUCN.name, matches("WM"), used.per.WM)%>%
+  summarise(data = "WILDMEAT",
+            UT.1 = sum(WM.UT.1),
+            UT.2 = NA,
+            UT.3 = NA,
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = NA,
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = NA,
+            UT.11 = NA,
+            UT.12 = NA,
+            UT.13 = NA,
+            UT.14 = NA,
+            UT.15 = NA,
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.WM))
+
+Mort <- use.raw.wiki %>% select(IUCN.name, matches("Mort"), -matches("year", ignore.case = TRUE), 
+                                used.per.Mort)%>%
+  summarise(data = "Morton et al.,",
+            UT.1 = sum(Mort.UT.1),
+            UT.2 = NA,
+            UT.3 = NA,
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = NA,
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = NA,
+            UT.11 = NA,
+            UT.12 = NA,
+            UT.13 = sum(Mort.UT.13),
+            UT.14 = NA,
+            UT.15 = NA,
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.Mort))
+
+LEMIS <- use.raw.wiki %>% select(IUCN.name, matches("LEMIS"), -matches("year", ignore.case = TRUE), 
+                                 used.per.LEMIS)%>%
+  summarise(data = "LEMIS",
+            UT.1 = sum(LEMIS.UT.1),
+            UT.2 = NA,
+            UT.3 = sum(LEMIS.UT.3),
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = sum(LEMIS.UT.6),
+            UT.7 = NA,
+            UT.8 = sum(LEMIS.UT.8),
+            UT.9 = NA,
+            UT.10 = sum(LEMIS.UT.10),
+            UT.11 = sum(LEMIS.UT.11),
+            UT.12 = sum(LEMIS.UT.12),
+            UT.13 = NA,
+            UT.14 = sum(LEMIS.UT.14),
+            UT.15 = sum(LEMIS.UT.15),
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.LEMIS))
+
+CITES <- use.raw.wiki %>% select(IUCN.name, matches("CITES"), -matches("year", ignore.case = TRUE),
+                                 used.per.CITES)%>%
+  summarise(data = "CITES",
+            UT.1 = sum(CITES.UT.1),
+            UT.2 = NA,
+            UT.3 = sum(CITES.UT.3),
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = sum(CITES.UT.6),
+            UT.7 = NA,
+            UT.8 = sum(CITES.UT.8),
+            UT.9 = NA,
+            UT.10 = sum(CITES.UT.10),
+            UT.11 = sum(CITES.UT.11),
+            UT.12 = sum(CITES.UT.12),
+            UT.13 = NA,
+            UT.14 = NA,
+            UT.15 = sum(CITES.UT.15),
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.CITES))
+
+WiTIS <- use.raw.wiki %>% select(IUCN.name, matches("WITIS"), -matches("year", ignore.case = TRUE), 
+                                 used.per.WiTIS)%>%
+  summarise(data = "WiTIS",
+            UT.1 = sum(WiTIS.UT.1),
+            UT.2 = NA,
+            UT.3 = sum(WiTIS.UT.1),
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = sum(WiTIS.UT.1),
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = NA,
+            UT.11 = NA,
+            UT.12 = sum(WiTIS.UT.1),
+            UT.13 = NA,
+            UT.14 = NA,
+            UT.15 = NA,
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.WiTIS))
+
+Wiki <- use.raw.wiki %>% select(IUCN.name, matches("Wiki"), -matches("year", ignore.case = TRUE), 
+                                used.per.wiki)%>%
+  summarise(data = "Wikipedia",
+            UT.1 = sum(MAN.Wiki.UT.1),
+            UT.2 = NA,
+            UT.3 = sum(MAN.Wiki.UT.3),
+            UT.4 = NA,
+            UT.5 = NA,
+            UT.6 = NA,
+            UT.7 = NA,
+            UT.8 = NA,
+            UT.9 = NA,
+            UT.10 = sum(MAN.Wiki.UT.10),
+            UT.11 = NA,
+            UT.12 = sum(MAN.Wiki.UT.12),
+            UT.13 = sum(MAN.Wiki.UT.13),
+            UT.14 = NA,
+            UT.15 = sum(MAN.Wiki.UT.15),
+            UT.16 = NA,
+            UT.17 = NA,
+            UT.18 = NA,
+            total = sum(used.per.wiki))
+
+all.summary <- rbind(UT, BRU, SpUD, BenLop, Mort, WILDMEAT, LEMIS, CITES, WiTIS,
+                     Don, Wiki)
+
+write.csv(all.summary, paste0(data.path, "Outputs/use.dataset/aves.mam.dataset.summary.Dec25.csv"))
