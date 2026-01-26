@@ -11,13 +11,14 @@ all.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/all.birds.wiki.csv")
 matched.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.taxo.match.csv")) %>%
   select(-X)
 length(unique(matched.wiki.urls$IUCN.name)) # 11021
+nrow(matched.wiki.urls %>% filter(!is.na(wikipediaURL))) #10977
 
 ## MAMMALS
 all.mam.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/all.mammals.wiki.csv"))
 matched.mam.wiki.urls <- read.csv(paste0(data.path, "Data/Wikipedia/IUCN.Wikipedia.Mammals.taxo.match.csv")) %>%
   select(-X)
 length(unique(matched.mam.wiki.urls$IUCN.name)) # 5946
-
+nrow(matched.mam.wiki.urls %>% filter(!is.na(wikipediaURL))) #5858
 ## Scrape wikipedia - BIRDS ----------------------------------------------------
 
 wiki.text.df <- data.frame()
@@ -139,7 +140,7 @@ sport.keywords <- c("\\bgame bird\\b", "\\bgamebird\\b", "\\bsport shoot\\b",
                     "\\bclosed season\\b")
 jewelry.keywords <- c("\\bornamental\\b", "\\bdecorative\\b", "\\bjewel", 
                       "\\bhandicrafts\\b", "\\bartisanal", "\\bdecoration",
-                      "\\bearing", "\\bnecklace", "\\bcarving", "\\badornment")
+                      "\\bearring", "\\bnecklace", "\\bcarving", "\\badornment")
 medicine.keywords <- c("\\bmedicine\\b", "\\bmedicinal\\b", "\\bremedy\\b", 
                        "\\bcure\\b", "\\bcurative\\b", 
                        "\\btherapy\\b", "\\btherapeutic\\b", "\\bhealing\\b", 
