@@ -133,6 +133,8 @@ use.all.mam <- use.all %>% filter(Class == "Mammalia") %>%
   filter(!is.na(Range.Size)) %>% # down to 5810 
   left_join(mam.travel.time, by = c("IUCN.name" = "SCI_NAME"))
 
+full.unknown.mam <- use.all %>% filter(Class == "Mammalia") %>% filter(used.no.purpose == 1)
+
 ## Format data - Mammals -------------------------------------------------------
 
 ## check and drop NAs (5377)
@@ -395,6 +397,9 @@ save(pred.out.ls, file = paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MA
 # read in test, train data and tuning grid
 load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.Dec25.permutation.rdata"))
 
+best <- pred.out.ls[grepl("mod.results", names(pred.out.ls))]
+best.all <- do.call(rbind, best) %>% group_by(use) %>% filter(Accuracy == max(Accuracy))
+
 use.ls <- c("food.hum.1", "med.3", "apparel.10", "jewellery.12", "pets.13", "sport.15")
 stats.out.ls <- list()
 
@@ -491,6 +496,9 @@ save(var.imp.birds, file = paste0(data.path, "Outputs/RF/pdp/vi.all.birds.permut
 
 # read in test, train data and tuning grid
 load(paste0(data.path, "Outputs/RF/tuning/all.tuning.data.MAM.Dec25.permutation.rdata"))
+
+best <- pred.out.ls[grepl("mod.results", names(pred.out.ls))]
+best.all <- do.call(rbind, best) %>% group_by(use) %>% filter(Accuracy == max(Accuracy))
 
 use.ls <- c("food.hum.1", "med.3", "apparel.10", "jewellery.12", "pets.13", "sport.15")
 stats.out.ls <- list()

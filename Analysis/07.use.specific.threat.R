@@ -93,7 +93,7 @@ IUCN.BRU.Thr <- IUCN.BRU.filt %>% filter(threat.score >= 6)
 # 1558 if we keep all threat scores, after removing LC and EX species (.
 IUCN.BRU.Thr <- IUCN.BRU.filt %>%
   #filter(threat.score >= 6) %>%
-  left_join(sp.status) %>% filter(!status %in% c("EX", "EW", "LC"))
+  left_join(sp.status) %>% filter(!status %in% c("EX", "LC"))
 
 ## Pathway 1 - if a species is likely threatened by use and only has 1 use 
 ## documented by the IUCN then we can reasonably assume that that must logically
@@ -428,7 +428,7 @@ str.tally <- data.frame(use = c("food", "meds", "apparel", "aesthetics", "pets",
            neg.str = length(neg.string),
            no.neg.str = length(no.neg.string),
            unc.str = length(unc.string)) %>%
-  mutate(total = (use.str*neg.str) +(use.str*no.neg.str) + (use.str*unc.str))
+  mutate(total = use.str + (use.str*neg.str) +(use.str*no.neg.str) + (use.str*unc.str))
 sum(str.tally$total) # 20,860
 
 # make strings, add exceptions for extra letters after the word.
@@ -464,7 +464,7 @@ misleading.str <- c("medicine trees", "medicinal trees",
                     "subsistence logging",
                     "subsistence cropping", "subsistence farming",
                     "subsistence agriculture", 
-                    "leather leaf ferns", "leather fern", "leather leaf",
+                    "leather leaf", "leather fern", "leather leaf",
                     "ornamental crop", "ornamental shrub", "ornamental plant")
 misleading.str <- paste(misleading.str, collapse = "|")
 
@@ -750,4 +750,8 @@ all.classify.out <- all.classify %>% left_join(IUCN.use.tidy.bb) %>%
 ## write out the data here for further manual checks of all likely or unlikely species
 write.csv(all.classify.out,
           paste0(data.path, "Outputs/threat.dataset/IUCN.threat.all.classif.OUT.csv"))
+
+
+## Check number of manual checks made
+all.classify.in <- read.csv(paste0(data.path, "Outputs/threat.dataset/IUCN.threat.all.classif.IN.csv"))
 
