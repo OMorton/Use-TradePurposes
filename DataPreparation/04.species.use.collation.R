@@ -343,6 +343,9 @@ WiTIS.df <- read.csv(paste0(data.path, "Data/WiTIS/IUCN.WiTIS.taxo.match.csv")) 
 
 unique(WiTIS.df$Category.of.Incident)
 unique(WiTIS.df$Item...Commodity.Type)
+
+check <- WiTIS.df %>% group_by(Item...Commodity.Type, Category.of.Incident) %>%
+  summarise(length(unique(IUCN.name)))
 # "5. Animal Injury / Mortality / Welfare" 
 # reading highlights many of these are HWC, or unexplained deaths
 # 6. Human-Wildlife Conflict
@@ -873,16 +876,16 @@ WiTIS <- use.raw.wiki %>% select(IUCN.name, matches("WITIS"), -matches("year", i
   summarise(data = "WiTIS",
             UT.1 = sum(WiTIS.UT.1),
             UT.2 = NA,
-            UT.3 = sum(WiTIS.UT.1),
+            UT.3 = sum(WiTIS.UT.3),
             UT.4 = NA,
             UT.5 = NA,
-            UT.6 = sum(WiTIS.UT.1),
+            UT.6 = sum(WiTIS.UT.6),
             UT.7 = NA,
             UT.8 = NA,
             UT.9 = NA,
             UT.10 = NA,
             UT.11 = NA,
-            UT.12 = sum(WiTIS.UT.1),
+            UT.12 = sum(WiTIS.UT.12),
             UT.13 = NA,
             UT.14 = NA,
             UT.15 = NA,
