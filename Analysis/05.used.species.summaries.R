@@ -15,9 +15,9 @@ library(ggtree)
 ## read in data ----------------------------------------------------------------
 data.path <- "X:/morton_research/User/bi1om/Research/Wildlife_trade/Morton_et_al_TradePurposes/Analysis/"
 
-use.all <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Oct25.csv"))
-use.all.birds <- use.all %>% filter(Class == "Aves")
-use.all.mam <- use.all %>% filter(Class == "Mammalia")
+use.all <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.tidy.Dec25.csv"))
+use.all.birds <- use.all %>% filter(Class == "Aves") # 11021
+use.all.mam <- use.all %>% filter(Class == "Mammalia") # 5946
 
 ## Simple summaries ------------------------------------------------------------
 
@@ -39,10 +39,25 @@ use.status.sum <- use.long %>%
   summarise(sp.count = sum(pres)) %>% 
   filter(use.coarse != "no.purpose")
 
+# % for text
+use.long %>%
+  group_by(Class,use.coarse)  %>% 
+  summarise(sp.count = sum(pres)) %>% 
+  filter(use.coarse != "no.purpose") %>%
+  mutate(totals = ifelse(Class == "Aves", 11021, 5946),
+         perc = round((sp.count/totals)*100,1))
+
 use.long %>%
   group_by(use.coarse)  %>% 
   summarise(sp.count = sum(pres)) %>% 
   filter(use.coarse != "no.purpose")
+
+length(unique(use.long$IUCN.name))
+use.long %>% filter(use.coarse == "use" & pres == 1) #8797
+use.long %>% filter(use.coarse == "used.no.purpose" & pres == 1) #2012
+use.long %>% filter(!use.coarse %in% c("no.purpose", "used.no.purpose", "use")) %>% filter(pres == 1) %>%
+  summarise(length(unique(IUCN.name))) # 6785
+
 
 use.ovr <- use.status.sum %>% filter(use.coarse == "use") %>%
   group_by(Class,use.coarse) %>% summarise(sp.count = sum(sp.count))
@@ -326,8 +341,8 @@ full.fig1.2 <- ggdraw(full.fig1) +
 # draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
 #            x = 0.93, y = 0.27, width = 0.05, height = 0.05)
 
-ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.use.phylobar.v4.unicol.png",
+ggsave(path = paste0(data.path,"Outputs/Figures/Fig1"),
+       filename = "mam.aves.use.phylobar.unicol.png",
        full.fig1.2, bg = "white",
        device = "png", width = 30, height = 30, units = "cm")
 
@@ -397,6 +412,8 @@ for (i in 1:length(uses.ls)) {
 
 plot(top10.b)
 ## plot summed rasters ---------------------------------------------------------
+uses.ls <- c("use", "pets.13","apparel.10", "food.hum.1", "sport.15","jewellery.12", "med.3", 
+             "used.no.purpose")
 world <- ne_countries(scale = 50, returnclass = "sf")
 map.ls <- list()
 for (i in 1:length(uses.ls)) {
@@ -515,9 +532,11 @@ use.arr2 <- ggdraw(use.arr) +
              x = 0.66-0.08, y = 0.96, width = 0.05, height = 0.05)
 
 ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.use.map.oct25.v3.png",
+       filename = "mam.aves.use.map.oct25.v4.png",
        use.arr2, bg = "white",
        device = "png", width = 25, height = 25, units = "cm")
+
+
 
 ## uni colours
 use.arr <-  ggarrange(map.ls$pets.13.bird.uni.plt, map.ls$pets.13.mammal.uni.plt, hs.plt.ls$pets.13.uni + theme(legend.position = "none"),
@@ -541,15 +560,105 @@ use.arr2 <- ggdraw(use.arr) +
   draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
              x = 0.66-0.08, y = 0.96, width = 0.05, height = 0.05)
 
-ggsave(path = paste0(data.path,"Outputs/Figures/Initial"),
-       filename = "mam.aves.use.map.oct25.v3.unicol.png",
+ggsave(path = paste0(data.path,"Outputs/Figures/Fig2.Mapping"),
+       filename = "mam.aves.use.map.unicol.png",
        use.arr2, bg = "white",
        device = "png", width = 25, height = 25, units = "cm")
 
+## all used species maps
+all.use.plt <- ggarrange(map.ls$use.bird.uni.plt, map.ls$use.mammal.uni.plt, 
+                         hs.plt.ls$use.uni + theme(legend.position = "none"),
+                         ncol = 1, nrow = 3, labels = c("a", "b", "c"))
 
-## Comparison to other data sets -----------------------------------------------
+all.use.plt2 <- ggdraw(all.use.plt) +
+  draw_plot(all.use.plt) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
+             x = 0.95, y = 0.95, width = 0.05, height = 0.05) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
+             x = 0.95, y = 0.61, width = 0.05, height = 0.05)
 
-use.raw <- read.csv(paste0(data.path, "Outputs/use.dataset/aves.mam.full.uses.raw.csv"))
+ggsave(path = paste0(data.path,"Outputs/Figures/SM"),
+       filename = "any.use.map.png",
+       all.use.plt2, bg = "white",
+       device = "png", width = 15, height = 18, units = "cm")
 
-use.raw %>% group_by(class, used.per.UT) %>% tally()
-use.raw %>% group_by(class, use) %>% tally()
+## used no known purpose species maps
+unknown.plt <- ggarrange(map.ls$used.no.purpose.bird.uni.plt, map.ls$used.no.purpose.mammal.uni.plt, 
+                         hs.plt.ls$used.no.purpose.uni + theme(legend.position = "none"),
+                         ncol = 1, nrow = 3, labels = c("a", "b", "c"))
+
+unknown.plt2 <- ggdraw(unknown.plt) +
+  draw_plot(unknown.plt) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Buceros.bicornis2.png"),
+             x = 0.95, y = 0.95, width = 0.05, height = 0.05) +
+  draw_image(paste0(data.path,"Data/Inset.pics/Smutsia.gigantea2.png"),
+             x = 0.95, y = 0.61, width = 0.05, height = 0.05)
+
+ggsave(path = paste0(data.path,"Outputs/Figures/SM"),
+       filename = "unknown.use.map.png",
+       unknown.plt2, bg = "white",
+       device = "png", width = 15, height = 18, units = "cm")
+
+## SM - Number of uses ---------------------------------------------------------
+
+use.long <- use.all %>% 
+  select(-X) %>%
+  pivot_longer(!c("IUCN.name", "common.name", "Class", "familyName", "orderName",
+                  "status"), names_to = "use.group", values_to = "pres") %>%
+  mutate(use.coarse = ifelse(use.group %in% c("ex.situ.16", "food.an.2",
+                                              "poison.4", "man.chem.5",
+                                              "other.chem.6", "fuels.7", 
+                                              "fibre.8", "construct.9",
+                                              "other.household.11", "research.14",
+                                              "other.17"),
+                             "other_known", use.group),
+         status = factor(status, levels = c("EW", "CR", "EN", "VU", "NT", "LC", "DD")))
+
+use.tally <- use.long %>% filter(!use.coarse %in% c("used.no.purpose", "use", "no.purpose"), pres == 1) %>%
+  group_by(IUCN.name, Class, status) %>%
+  summarise(uses.n = length(unique(use.coarse))) %>%
+  filter(uses.n>0) %>%
+  mutate(uses.n2 = ifelse(uses.n >4, ">5", as.character(uses.n)))
+
+mean(use.tally$uses.n)
+use.tally %>% group_by(Class) %>% summarise(mean(uses.n))
+use.tally %>% group_by(status) %>% summarise(mean(uses.n))
+use.tally.sum <- use.tally %>% group_by(Class, uses.n2) %>% 
+  summarise(sp.n = length(unique(IUCN.name))) %>%
+  mutate(all.sp = 6754,
+         prop = (sp.n/all.sp)*100)
+
+use.tally.plt <- ggplot(use.tally.sum, aes(uses.n2, sp.n, fill = Class)) +
+  geom_col() +
+  facet_wrap(~Class) +
+  scale_x_discrete(limits = c("1", "2", "3", "4", ">5")) +
+  scale_fill_manual(values = c("#9e9ac8", "#d8b365")) +
+  xlab("Number of uses") +
+  ylab("Species richness") +
+  theme_minimal() +
+  theme(strip.text = element_text(face = "bold"), legend.position = "none")
+
+ggsave(path = paste0(data.path,"Outputs/Figures/SM"),
+       filename = "use.tally.png",
+       use.tally.plt, bg = "white",
+       device = "png", width = 20, height = 12, units = "cm")
+
+
+# # check that all species marked as used and with a purpose have a purpose
+# # 8784
+# use.long %>% filter(use.coarse == "use" & pres == 1)
+# # 2030
+# use.long %>% filter(use.coarse == "used.no.purpose" & pres == 1)
+# #8784 -2030 = 6754
+# used.no.purp.sp <- use.long  %>% group_by(IUCN.name) %>% 
+#   mutate(use.combi = paste0(use.coarse, ".", pres)) %>%
+#   filter(use.combi %in% c("use.1", "used.no.purpose.0")) %>%
+#   filter(n()==2)
+# length(unique(used.no.purp.sp$IUCN.name)) # 6754
+# use.tally %>% filter(!IUCN.name %in% used.no.purp.sp$IUCN.name)
+
+
+  
+
+
+
